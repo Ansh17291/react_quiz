@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { useParams } from 'react-router-dom';
+import React, { useEffect, useRef, useState } from 'react';
+import { useParams, useSearchParams } from 'react-router-dom';
 import { useAppContext } from '../../context/AppContext';
 import { useToast } from '../../components/ui';
 import { AnimatedWrapper } from '../../components/shared/AnimatedComponents';
@@ -8,11 +8,13 @@ import { Button, Card } from '../../components/ui';
 const DiscussionPostPage = () => {
     const { postId } = useParams<{ postId: string }>();
     const { discussionPosts, users, currentUser, addReply } = useAppContext();
+    const [searchParams] = useSearchParams();
     const { addToast } = useToast();
-    const post = discussionPosts.find(p => p.id === postId);
-    const author = users.find(u => u.id === post?.authorId);
+    const post = discussionPosts.find(p => (p._id || p.id) === postId);
+    const author = users.find(u => (u._id || u.id) === post?.authorId);
 
     const [replyContent, setReplyContent] = useState('');
+    const replyTextareaRef = useRef<HTMLTextAreaElement | null>(null);
 
     const handleAddReply = (e: React.FormEvent) => {
         e.preventDefault();
@@ -20,10 +22,18 @@ const DiscussionPostPage = () => {
             addToast("Reply cannot be empty.", 'error');
             return;
         }
-        addReply(postId!, { authorId: currentUser!.id, content: replyContent });
+        addReply(postId!, { authorId: (currentUser!._id || currentUser!.id) as string, content: replyContent });
         setReplyContent('');
         addToast("Reply added!", 'success');
     };
+
+    // If navigated with ?reply=1, focus the reply box
+    useEffect(() => {
+        if (searchParams.get('reply') === '1' && replyTextareaRef.current) {
+            replyTextareaRef.current.focus();
+            replyTextareaRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+    }, [searchParams]);
 
     if (!post || !author) return <div>Post not found.</div>;
 
@@ -39,12 +49,15 @@ const DiscussionPostPage = () => {
             <Card>
                 <h3 className="text-2xl font-semibold mb-4">Replies ({post.replies.length})</h3>
                 <div className="space-y-4">
-                    {post.replies.sort((a,b) => a.createdAt.getTime() - b.createdAt.getTime()).map(reply => {
-                        const replyAuthor = users.find(u => u.id === reply.authorId);
+                    {post.replies
+                        .slice()
+                        .sort((a,b) => new Date(a.createdAt as any).getTime() - new Date(b.createdAt as any).getTime())
+                        .map(reply => {
+                        const replyAuthor = users.find(u => (u._id || u.id) === reply.authorId);
                         return (
-                            <div key={reply.id} className="p-4 bg-slate-800 rounded-lg">
+                            <div key={(reply as any)._id || reply.id} className="p-4 bg-slate-800 rounded-lg">
                                 <p className="mb-2">{reply.content}</p>
-                                <p className="text-xs text-slate-400 text-right">-- {replyAuthor?.name || 'Unknown'}, {new Date(reply.createdAt).toLocaleString()}</p>
+                                <p className="text-xs text-slate-400 text-right">-- {replyAuthor?.name || 'Unknown'}, {new Date(reply.createdAt as any).toLocaleString()}</p>
                             </div>
                         )
                     })}
@@ -54,7 +67,7 @@ const DiscussionPostPage = () => {
             <Card>
                  <h3 className="text-2xl font-semibold mb-4">Add Your Reply</h3>
                  <form onSubmit={handleAddReply} className="space-y-2">
-                     <textarea value={replyContent} onChange={e => setReplyContent(e.target.value)} rows={4}
+                     <textarea ref={replyTextareaRef} value={replyContent} onChange={e => setReplyContent(e.target.value)} rows={4}
                                className="w-full p-2 border rounded-md bg-slate-700 border-slate-600"
                                placeholder="Share your thoughts..."/>
                      <div className="text-right">

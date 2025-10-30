@@ -4,6 +4,7 @@ import { useAppContext } from "../../context/AppContext";
 import type { Question, StudentAnswer, QuizResult } from "../../types";
 import { Button, Card, Spinner, Modal } from "../../components/ui";
 import axios from "axios";
+import { api } from "../../services/api";
 
 const QuizTaker = () => {
   const { assignmentId } = useParams<{ assignmentId: string }>();
@@ -34,14 +35,14 @@ const QuizTaker = () => {
         setIsLoading(true);
         setError(null);
 
-        // Fetch assignment and quizzes in parallel
-        const [assignmentRes, quizzesRes] = await Promise.all([
-          axios.get(`http://localhost:8080/api/assignment/${assignmentId}`),
-          axios.get("http://localhost:8080/api/quizzes"),
+        // Backend may not expose assignment by ID; fetch all and find client-side
+        const [assignments, quizzesRes] = await Promise.all([
+          api.getAssignments(),
+          api.getQuizzes(),
         ]);
 
-        const assignmentData = assignmentRes.data;
-        const quizData = quizzesRes.data.find(
+        const assignmentData = (assignments || []).find((a: any) => (a._id || a.id) === assignmentId);
+        const quizData = (quizzesRes || []).find(
           (q: any) => q._id === assignmentData.quizId
         );
 
@@ -134,8 +135,22 @@ const QuizTaker = () => {
     if (!quiz || !currentUser || activeQuestions.length === 0) return;
 
     const studentAnswers: StudentAnswer[] = activeQuestions.map((q) => {
-      const selectedOptionIndex = selectedAnswers[q.id] ?? -1;
-      const isCorrect = selectedOptionIndex == q.correctAnswerIndex;
+      const selectedOptionIndexShuffled = selectedAnswers[q.id] ?? -1;
+
+      // Map the selected option back to the ORIGINAL quiz option index
+      const original = (quiz.questionPool || []).find(
+        (orig: any) => (orig._id || orig.id) === q.id
+      );
+      const selectedAnswerText =
+        selectedOptionIndexShuffled >= 0 ? q.options[selectedOptionIndexShuffled] : undefined;
+      const selectedOptionIndex = original && selectedAnswerText
+        ? original.options.findIndex((opt: string) => opt === selectedAnswerText)
+        : -1;
+
+      const isCorrect =
+        original && selectedOptionIndex >= 0
+          ? selectedOptionIndex === original.correctAnswerIndex
+          : false;
 
       console.log(selectedOptionIndex);
       console.log(q.correctAnswerIndex);

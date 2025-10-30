@@ -9,6 +9,7 @@ import {
 import { Button, Card, Modal } from "../../components/ui";
 import { PlusCircleIcon } from "../../components/Icons";
 import axios from "axios";
+import { api } from "../../services/api";
 
 const DiscussionListPage = () => {
   const { currentUser } = useAppContext();
@@ -33,14 +34,12 @@ const DiscussionListPage = () => {
       try {
         setIsLoading(true);
         setError(null);
-        const response = await axios.get(
-          "http://localhost:8080/api/discussions"
-        );
+        const posts = await api.getPosts();
 
-        console.log(response.data);
+        console.log(posts);
 
         // Sort posts by creation date (newest first)
-        const sortedPosts = response.data?.sort(
+        const sortedPosts = (posts || []).sort(
           (a: any, b: any) =>
             new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
         );
@@ -62,8 +61,8 @@ const DiscussionListPage = () => {
   useEffect(() => {
     const fetchUsers = async () => {
       try {
-        const response = await axios.get("http://localhost:8080/api/users");
-        setUsers(response.data);
+        const response = await api.getUsers();
+        setUsers(response || []);
       } catch (err) {
         console.error("Failed to fetch users:", err);
       }
@@ -87,20 +86,16 @@ const DiscussionListPage = () => {
 
     try {
       setIsSubmitting(true);
-      const response = await axios.post(
-        "http://localhost:8080/api/discussions",
-        {
-          title: newPostTitle,
-          content: newPostContent,
-          authorId: currentUserId,
-        }
-      );
+      const created = await api.addPost({
+        title: newPostTitle,
+        content: newPostContent,
+        authorId: currentUserId,
+      } as any);
 
-      // Add the new post to the list
       const newPost = {
-        ...response.data,
-        id: response.data._id || response.data.id,
-        _id: response.data._id || response.data.id,
+        ...created,
+        id: created._id || created.id,
+        _id: created._id || created.id,
       };
 
       setDiscussionPosts((prev) => [newPost, ...prev]);
@@ -147,10 +142,9 @@ const DiscussionListPage = () => {
               return (
                 <div
                   key={postId}
-                  className="p-4 bg-slate-800 rounded-lg flex justify-between items-center hover:bg-slate-700 transition-colors cursor-pointer"
-                  onClick={() => navigate(`/discussions/${postId}`)}
+                  className="p-4 bg-slate-800 rounded-lg flex justify-between items-center hover:bg-slate-700 transition-colors"
                 >
-                  <div>
+                  <div className="cursor-pointer" onClick={() => navigate(`/discussions/${postId}`)}>
                     <h3 className="text-lg font-bold text-primary-400">
                       {post.title}
                     </h3>
@@ -159,9 +153,17 @@ const DiscussionListPage = () => {
                       {new Date(post.createdAt).toLocaleDateString()}
                     </p>
                   </div>
-                  <div className="text-right">
-                    <p className="font-semibold">{post.replies?.length || 0}</p>
-                    <p className="text-sm text-slate-400">Replies</p>
+                  <div className="flex items-center gap-4">
+                    <div className="text-right">
+                      <p className="font-semibold">{post.replies?.length || 0}</p>
+                      <p className="text-sm text-slate-400">Replies</p>
+                    </div>
+                    <Button
+                      variant="secondary"
+                      onClick={() => navigate(`/discussions/${postId}?reply=1`)}
+                    >
+                      Reply
+                    </Button>
                   </div>
                 </div>
               );

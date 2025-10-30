@@ -16,6 +16,7 @@ import {
   BookOpenIcon,
 } from "../../components/Icons";
 import axios from "axios";
+import { api } from "../../services/api";
 
 const StudentDashboard = () => {
   const { currentUser } = useAppContext();
@@ -61,23 +62,22 @@ const StudentDashboard = () => {
         setIsLoading(true);
         setError(null);
 
-        // Fetch all data in parallel
-        const [usersRes, assignmentsRes, quizzesRes, resultsRes] =
-          await Promise.all([
-            axios.get("http://localhost:8080/api/users"),
-            axios.get("http://localhost:8080/api/assignment"),
-            axios.get("http://localhost:8080/api/quizzes"),
-            axios.get("http://localhost:8080/api/results"),
-          ]);
+        // Fetch all data in parallel via shared API
+        const [usersRes, assignmentsRes, quizzesRes, resultsRes] = await Promise.all([
+          api.getUsers(),
+          api.getAssignments(),
+          api.getQuizzes(),
+          api.getResults(),
+        ]);
 
         // Update state with the fetched data
-        setUsers(usersRes.data);
-        setQuizzes(quizzesRes.data);
-        setResults(resultsRes.data);
-        setAssignments(assignmentsRes.data);
+        setUsers(usersRes || []);
+        setQuizzes(quizzesRes || []);
+        setResults(resultsRes || []);
+        setAssignments(assignmentsRes || []);
 
         // Filter assignments for the current student
-        const studentAssignmentsData = assignmentsRes.data.filter((a: any) =>
+        const studentAssignmentsData = (assignmentsRes || []).filter((a: any) =>
           a.studentIds.includes(currentUserId)
         );
         console.log("Current user ID:", currentUserId);

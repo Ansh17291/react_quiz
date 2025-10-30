@@ -1,15 +1,15 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useAppContext } from "../../context/AppContext";
 import { AnimatedWrapper } from "../../components/shared/AnimatedComponents";
 import { ContributionHeatmap } from "../../features/dashboard/ContributionHeatmap";
 import { Card } from "../../components/ui";
-import axios from "axios";
+import { api } from "../../services/api";
 
 const StudentProfilePage = () => {
   const { studentId } = useParams<{ studentId: string }>();
   console.log(studentId);
-  const { currentUser } = useAppContext();
+  useAppContext();
 
   const [student, setStudent] = useState<any>(null);
   const [studentResults, setStudentResults] = useState<any[]>([]);
@@ -24,11 +24,12 @@ const StudentProfilePage = () => {
   useEffect(() => {
     const fetchStudent = async () => {
       try {
-        const response = await axios.get(
-          `http://localhost:8080/api/users/${studentId}`
+        // Some backends may not expose /users/:id; fetch all and find client-side
+        const users = await api.getUsers();
+        const found = (users || []).find(
+          (u: any) => (u._id || u.id) === studentId
         );
-        setStudent(response.data);
-        console.log(response.data);
+        setStudent(found || null);
       } catch (error) {
         console.error("Failed to fetch student:", error);
       }
@@ -43,10 +44,11 @@ const StudentProfilePage = () => {
   useEffect(() => {
     const fetchResults = async () => {
       try {
-        const response = await axios.get(
-          `http://localhost:8080/api/results/user/${studentId}`
+        const results = await api.getResults();
+        const userResults = (results || []).filter(
+          (r: any) => r.userId === studentId
         );
-        const sortedResults = response.data.sort(
+        const sortedResults = userResults.sort(
           (a: any, b: any) =>
             new Date(b.submittedAt).getTime() -
             new Date(a.submittedAt).getTime()
@@ -67,10 +69,11 @@ const StudentProfilePage = () => {
   useEffect(() => {
     const fetchPosts = async () => {
       try {
-        const response = await axios.get(
-          `http://localhost:8080/api/discussions/user/${studentId}`
+        const posts = await api.getPosts();
+        const userPosts = (posts || []).filter(
+          (p: any) => p.authorId === studentId
         );
-        const sortedPosts = response.data
+        const sortedPosts = userPosts
           .sort(
             (a: any, b: any) =>
               new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
@@ -92,8 +95,8 @@ const StudentProfilePage = () => {
   useEffect(() => {
     const fetchQuizzes = async () => {
       try {
-        const response = await axios.get("http://localhost:8080/api/quizzes");
-        setQuizzes(response.data);
+        const response = await api.getQuizzes();
+        setQuizzes(response || []);
       } catch (error) {
         console.error("Failed to fetch quizzes:", error);
       }

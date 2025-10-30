@@ -8,10 +8,10 @@ import {
   type DiscussionPost,
   Roles,
 } from "../types";
-import { db } from "../data/models";
+// removed local DB usage
 import { usePersistentState } from "../hooks/usePersistentState";
 import { startChat } from "../services/geminiService";
-import { api } from "../services/api";
+import { api, BASE } from "../services/api";
 import type { Role } from "../types";
 import axios from "axios";
 
@@ -77,84 +77,79 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
   const [isDataLoaded, setIsDataLoaded] = useState(false);
   const [backendAvailable, setBackendAvailable] = useState(false);
 
+  // Calculate total points for a user from results
+  const calculateUserPoints = (userId: string, allResults: QuizResult[]): number => {
+    return (allResults || [])
+      .filter((r) => r.userId === userId)
+      .reduce((sum, r) => sum + (r.score || 0), 0);
+  };
+
   useEffect(() => {
     let mounted = true;
     (async () => {
-      // Check backend health; if available, fetch from backend, otherwise fallback to local db
+      // Always fetch from backend; no local DB fallback
       const healthy = await api.health();
       if (!mounted) return;
-      if (healthy) {
-        setBackendAvailable(true);
-        try {
-          const [usersResp, quizzesResp, resourcesResp, postsResp] =
-            await Promise.all([
-              api.getUsers(),
-              api.getQuizzes(),
-              api.getResources(),
-              api.getPosts(),
-            ]);
+      setBackendAvailable(!!healthy);
+      try {
+        const [usersResp, quizzesResp, resourcesResp, postsResp, resultsResp, assignmentsResp] = await Promise.all([
+          api.getUsers(),
+          api.getQuizzes(),
+          api.getResources(),
+          api.getPosts(),
+          api.getResults(),
+          api.getAssignments(),
+        ]);
 
-          // normalize IDs (backend uses _id)
-          const normUsers = (usersResp || []).map((u: any) => normalizeUser(u));
-          const normQuizzes = (quizzesResp || []).map((q: any) => ({
-            id: q._id || q.id,
-            _id: q._id || q.id,
-            title: q.title,
-            questionPool: q.questionPool || [],
-            createdBy: q.createdBy || q.createdBy,
-          }));
-          const normResources = (resourcesResp || []).map((r: any) => ({
-            id: r._id || r.id,
-            _id: r._id || r.id,
-            title: r.title,
-            content: r.content,
-            type: r.type,
-          }));
-          const normPosts = (postsResp || []).map((p: any) => ({
-            id: p._id || p.id,
-            _id: p._id || p.id,
-            title: p.title,
-            content: p.content,
-            authorId: p.authorId,
-            createdAt: p.createdAt,
-            replies: (p.replies || []).map((rep: any) => ({
-              id: rep._id || rep.id,
-              _id: rep._id || rep.id,
-              authorId: rep.authorId,
-              content: rep.content,
-              createdAt: rep.createdAt,
-            })),
-          }));
+        const normUsers = (usersResp || []).map((u: any) => normalizeUser(u));
+        const normQuizzes = (quizzesResp || []).map((q: any) => ({
+          id: q._id || q.id,
+          _id: q._id || q.id,
+          title: q.title,
+          questionPool: q.questionPool || [],
+          createdBy: q.createdBy || q.createdBy,
+        }));
+        const normResources = (resourcesResp || []).map((r: any) => ({
+          id: r._id || r.id,
+          _id: r._id || r.id,
+          title: r.title,
+          content: r.content,
+          type: r.type,
+        }));
+        const normPosts = (postsResp || []).map((p: any) => ({
+          id: p._id || p.id,
+          _id: p._id || p.id,
+          title: p.title,
+          content: p.content,
+          authorId: p.authorId,
+          createdAt: p.createdAt,
+          replies: (p.replies || []).map((rep: any) => ({
+            id: rep._id || rep.id,
+            _id: rep._id || rep.id,
+            authorId: rep.authorId,
+            content: rep.content,
+            createdAt: rep.createdAt,
+          })),
+        }));
 
-          const resultsResp = await api.getResults().catch(() => []);
-          const assignmentsResp = await api.getAssignments().catch(() => []);
+        const resultsList = resultsResp || [];
+        // Derive points from results to keep UI consistent
+        const usersWithPoints = normUsers.map((u: User) => ({
+          ...u,
+          points: calculateUserPoints(u._id || u.id, resultsList),
+        }));
 
-          setUsers(normUsers);
-          setQuizzes(normQuizzes);
-          setResults(resultsResp || []);
-          setAssignments(assignmentsResp || []);
-          setResources(normResources);
-          setDiscussionPosts(normPosts);
-          setIsDataLoaded(true);
-          return;
-        } catch (err) {
-          console.warn(
-            "Failed to load remote data, falling back to local DB",
-            err
-          );
-        }
+        setUsers(usersWithPoints);
+        setQuizzes(normQuizzes);
+        setResults(resultsList);
+        setAssignments(assignmentsResp || []);
+        setResources(normResources);
+        setDiscussionPosts(normPosts);
+        setIsDataLoaded(true);
+      } catch (err) {
+        console.error("Failed to load data from backend:", err);
+        setIsDataLoaded(true);
       }
-
-      // fallback to local DB
-      const data = db.getAllData();
-      if (!mounted) return;
-      setUsers(data.users);
-      setQuizzes(data.quizzes);
-      setResults(data.results);
-      setAssignments(data.assignments);
-      setResources(data.resources);
-      setDiscussionPosts(data.discussionPosts);
-      setIsDataLoaded(true);
     })();
     return () => {
       mounted = false;
@@ -181,7 +176,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
     quiz: Quiz,
     assignment: Omit<QuizAssignment, "id" | "quizId">
   ): Promise<{ newQuiz: Quiz; newAssignment: QuizAssignment }> => {
-    const quizData = await axios.post("http://localhost:8080/api/create-quiz", {
+    const quizData = await axios.post(`${BASE}/api/create-quiz`, {
       quiz,
       pool: quiz.questionPool,
       assignment,
@@ -195,46 +190,41 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
   const addResult = async (result: QuizResult) => {
     console.log("Adding result for quiz:", result.quizId);
     const results = await axios.post(
-      `http://localhost:8080/api/quizzes/${result.quizId}/submit`,
+      `${BASE}/api/quizzes/${result.quizId}/submit`,
       {
         result,
       }
     );
 
     console.log("Result submitted:", results.data);
+    // Optimistically update results; points will be recalculated in the effect below
+    setResults((prev) => [...prev, results.data || result]);
   };
 
   const updateUserPoints = (userId: string, points: number) => {
-    const updatedUsers = db.updateUserPoints(userId, points);
-    setUsers(updatedUsers);
+    setUsers((prev) => prev.map((u) => (u.id === userId || u._id === userId) ? { ...u, points } : u));
   };
 
   const addResource = (resource: Resource) => {
-    if (backendAvailable) {
-      api
-        .addResource(resource as any)
-        .then((created: any) => {
-          setResources((prev) => [
-            ...prev,
-            {
-              ...resource,
-              id: created._id || created.id,
-              _id: created._id || created.id,
-            },
-          ]);
-        })
-        .catch(() => {
-          const newResource = db.addResource(resource);
-          setResources((prev) => [...prev, newResource]);
-        });
-      return;
-    }
-    const newResource = db.addResource(resource);
-    setResources((prev) => [...prev, newResource]);
+    api
+      .addResource(resource as any)
+      .then((created: any) => {
+        setResources((prev) => [
+          ...prev,
+          {
+            ...resource,
+            id: created._id || created.id,
+            _id: created._id || created.id,
+          },
+        ]);
+      })
+      .catch((err) => {
+        console.error("Failed to add resource:", err);
+      });
   };
 
   const removeUser = async (userId: string) => {
-    const data = await axios.post("http://localhost:8080/api/delete", {
+    const data = await axios.post(`${BASE}/api/delete`, {
       userId,
     });
     console.log("User removed:", data);
@@ -246,68 +236,72 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
   const addPost = (
     postData: Omit<DiscussionPost, "id" | "createdAt" | "replies">
   ) => {
-    if (backendAvailable) {
-      api
-        .addPost(postData as any)
-        .then((created: any) => {
-          const mapped = {
-            id: created._id || created.id,
-            _id: created._id || created.id,
-            title: created.title,
-            content: created.content,
-            authorId: created.authorId,
-            createdAt: created.createdAt,
-            replies: created.replies || [],
-          } as DiscussionPost;
-          setDiscussionPosts((prev) => [mapped, ...prev]);
-        })
-        .catch(() => {
-          const updatedPosts = db.addPost(postData);
-          setDiscussionPosts(updatedPosts);
-        });
-      return;
-    }
-    const updatedPosts = db.addPost(postData);
-    setDiscussionPosts(updatedPosts);
+    api
+      .addPost(postData as any)
+      .then((created: any) => {
+        const mapped = {
+          id: created._id || created.id,
+          _id: created._id || created.id,
+          title: created.title,
+          content: created.content,
+          authorId: created.authorId,
+          createdAt: created.createdAt,
+          replies: created.replies || [],
+        } as DiscussionPost;
+        setDiscussionPosts((prev) => [mapped, ...prev]);
+      })
+      .catch((err) => {
+        console.error("Failed to add post:", err);
+      });
   };
 
   const addReply = (
     postId: string,
     replyData: { authorId: string; content: string }
   ) => {
-    if (backendAvailable) {
-      api
-        .addReply(postId, replyData as any)
-        .then((created: any) => {
-          // naive local append: refetch posts would be ideal; here we append reply locally
-          setDiscussionPosts((prev) =>
-            prev.map((p) =>
-              p.id === postId || p._id === postId
-                ? {
-                    ...p,
-                    replies: [
-                      ...p.replies,
-                      {
-                        id: created._id || created.id,
-                        _id: created._id || created.id,
-                        authorId: created.authorId,
-                        content: created.content,
-                        createdAt: created.createdAt,
-                      },
-                    ],
-                  }
-                : p
-            )
-          );
-        })
-        .catch(() => {
-          const updatedPosts = db.addReply(postId, replyData);
-          setDiscussionPosts(updatedPosts);
-        });
-      return;
-    }
-    const updatedPosts = db.addReply(postId, replyData);
-    setDiscussionPosts(updatedPosts);
+    const optimistic = {
+      id: `reply-${Date.now()}`,
+      _id: undefined as any,
+      authorId: replyData.authorId,
+      content: replyData.content,
+      createdAt: new Date().toISOString(),
+    };
+
+    // Optimistic UI update
+    setDiscussionPosts((prev) =>
+      prev.map((p) =>
+        p.id === postId || p._id === postId
+          ? { ...p, replies: [...p.replies, optimistic] }
+          : p
+      )
+    );
+
+    api
+      .addReply(postId, replyData as any)
+      .then((created: any) => {
+        // Replace optimistic reply with server one
+        setDiscussionPosts((prev) =>
+          prev.map((p) => {
+            if (!(p.id === postId || p._id === postId)) return p;
+            const replies = p.replies.slice();
+            const idx = replies.findIndex((r: any) => r.id === optimistic.id);
+            const serverReply = {
+              id: created._id || created.id,
+              _id: created._id || created.id,
+              authorId: created.authorId,
+              content: created.content,
+              createdAt: created.createdAt,
+            };
+            if (idx >= 0) replies[idx] = serverReply;
+            else replies.push(serverReply);
+            return { ...p, replies };
+          })
+        );
+      })
+      .catch((err) => {
+        console.error("Failed to add reply:", err);
+        // keep optimistic reply; optionally mark unsynced
+      });
   };
 
   useEffect(() => {
@@ -322,6 +316,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
       }
     }
   }, [users, currentUser]);
+
+  // Keep user points in sync with results
+  useEffect(() => {
+    if (users.length === 0) return;
+    setUsers((prev) =>
+      prev.map((u) => ({
+        ...u,
+        points: calculateUserPoints(u._id || u.id, results),
+      }))
+    );
+  }, [results]);
 
   const contextValue = useMemo(
     () => ({

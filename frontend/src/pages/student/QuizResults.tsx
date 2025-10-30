@@ -17,6 +17,7 @@ import {
   SparklesIcon,
 } from "../../components/Icons";
 import axios from "axios";
+import { api } from "../../services/api";
 
 const QuizResults = () => {
   const { quizId } = useParams<{ quizId: string }>();
@@ -42,16 +43,28 @@ const QuizResults = () => {
         setIsLoading(true);
         setError(null);
 
-        // Fetch quizzes and results in parallel
+        // Fetch quizzes and results in parallel via shared API
         const [quizzesRes, resultsRes] = await Promise.all([
-          axios.get("http://localhost:8080/api/quizzes"),
-          axios.get("http://localhost:8080/api/results"),
+          api.getQuizzes(),
+          api.getResults(),
         ]);
 
-        const quizData = quizzesRes.data.find((q: any) => q._id === quizId);
-        const resultData = resultsRes.data.find(
+        const quizData = (quizzesRes || []).find((q: any) => q._id === quizId);
+        let resultData = (resultsRes || []).find(
           (r: any) => r.quizId === quizId && r.userId === currentUser?._id
         );
+
+        // Normalize result shape (timeTaken seconds, numeric)
+        if (resultData) {
+          const raw = resultData.timeTaken as any;
+          let timeTakenNum = typeof raw === "string" ? parseInt(raw, 10) : raw;
+          if (Number.isFinite(timeTakenNum) && timeTakenNum > 300000) {
+            // looks like ms → convert to seconds
+            timeTakenNum = Math.round(timeTakenNum / 1000);
+          }
+          if (!Number.isFinite(timeTakenNum)) timeTakenNum = 0;
+          resultData = { ...resultData, timeTaken: timeTakenNum };
+        }
 
         if (!quizData) {
           setError("Quiz not found");

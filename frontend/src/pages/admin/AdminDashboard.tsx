@@ -18,6 +18,7 @@ import {
   SparklesIcon,
 } from "../../components/Icons";
 import axios from "axios";
+import { api } from "../../services/api";
 
 const AdminDashboard = () => {
   const { addQuiz, addResource, users, removeUser } = useAppContext();
@@ -48,9 +49,9 @@ const AdminDashboard = () => {
 
   useEffect(() => {
     const fetchData = async () => {
-      const data = await axios.get("http://localhost:8080/api/users");
-      console.log(data.data);
-      students.current = data.data.filter((u) => u.role === "STUDENT");
+      const data = await api.getUsers();
+      console.log(data);
+      students.current = (data || []).filter((u) => u.role === "STUDENT");
     };
     fetchData();
   }, []);

@@ -1,6 +1,6 @@
 import type { User, Quiz, QuizResult, Resource, DiscussionPost } from '../types';
 
-const BASE = import.meta.env.VITE_API_URL || 'http://localhost:8080';
+export const BASE = import.meta.env.VITE_API_URL || 'http://localhost:8080';
 
 async function request(path: string, opts: RequestInit = {}) {
     const res = await fetch(`${BASE}${path}`, {
@@ -32,11 +32,13 @@ export const api = {
     addQuiz: (quiz: Partial<Quiz>) => request('/api/quizzes', { method: 'POST', body: JSON.stringify(quiz) }),
     submitQuizResult: (quizId: string, payload: Partial<QuizResult>) => request(`/api/quizzes/${quizId}/submit`, { method: 'POST', body: JSON.stringify(payload) }),
     getResults: () => request('/api/results').catch(() => []),
+    getAssignments: () => request('/api/assignment').catch(() => []),
     getResources: () => request('/api/resources'),
     addResource: (r: Partial<Resource>) => request('/api/resources', { method: 'POST', body: JSON.stringify(r) }),
     getPosts: () => request('/api/posts'),
     getPost: (id: string) => request(`/api/posts/${id}`),
-    addPost: (p: Partial<DiscussionPost>) => request('/api/posts', { method: 'POST', body: JSON.stringify(p) }),
+    // Backend creates posts at /api/discussions
+    addPost: (p: Partial<DiscussionPost>) => request('/api/discussions', { method: 'POST', body: JSON.stringify(p) }),
     addReply: (postId: string, reply: any) => request(`/api/posts/${postId}/replies`, { method: 'POST', body: JSON.stringify(reply) }),
 };
 

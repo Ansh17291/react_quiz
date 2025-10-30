@@ -24,35 +24,24 @@ const LeaderboardPage = () => {
   const overallLeaderboard = useRef<any>([]);
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        const [usersData, resultsData] = await Promise.all([
-          api.getUsers(),
-          api.getResults(),
-        ]);
-
-        // Filter and sort students by points
-        students.current = usersData.filter((u) => u.role === "STUDENT");
-        overallLeaderboard.current = students.current.sort(
-          (a, b) => (b.points || 0) - (a.points || 0)
-        );
-
-        // Update the results context if we got new data
-        if (resultsData?.length) {
-          results.length = 0;
-          results.push(...resultsData);
-        }
-      } catch (err) {
-        console.error("Failed to load leaderboard data:", err);
-        setError("Failed to load leaderboard data. Please try again later.");
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchData();
-  }, []);
+    try {
+      setLoading(true);
+      setError(null);
+      // Use context users (already have derived points) and re-evaluate on changes
+      const studentUsers = (users || []).filter((u) => u.role === "STUDENT");
+      // Clone before sort to avoid mutating context refs
+      const sorted = [...studentUsers].sort(
+        (a, b) => (b.points || 0) - (a.points || 0)
+      );
+      students.current = studentUsers;
+      overallLeaderboard.current = sorted;
+    } catch (err) {
+      console.error("Failed to prepare leaderboard:", err);
+      setError("Failed to load leaderboard data. Please try again later.");
+    } finally {
+      setLoading(false);
+    }
+  }, [users, results]);
 
   const rankBadges = ["🥇", "🥈", "🥉"];
 
@@ -84,7 +73,7 @@ const LeaderboardPage = () => {
         return (a.timeTaken || 0) - (b.timeTaken || 0);
       })
       .map((result) => {
-        const user = students.current.find((u) => u._id === result.userId);
+        const user = students.current.find((u) => (u._id || (u as any).id) === result.userId);
         return {
           user,
           result,

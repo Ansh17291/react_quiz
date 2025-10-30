@@ -5,6 +5,7 @@ import { useAppContext } from "../context/AppContext";
 import { useToast } from "../components/ui";
 import { Button, Card } from "../components/ui";
 import axios from "axios";
+import { BASE } from "../services/api";
 
 const LoginPage = () => {
   const { login } = useAppContext();
@@ -24,13 +25,10 @@ const LoginPage = () => {
   const handleStudentLogin = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const user = await axios.post(
-      "http://localhost:8080/api/user/student-login",
-      {
-        name,
-        password,
-      }
-    );
+    const user = await axios.post(`${BASE}/api/user/student-login`, {
+      name,
+      password,
+    });
 
     if (user.data.user) {
       login(user.data);
@@ -48,7 +46,7 @@ const LoginPage = () => {
       return;
     }
 
-    const user = await axios.post("http://localhost:8080/api/user/signup", {
+    const user = await axios.post(`${BASE}/api/user/signup`, {
       username: name,
       password: password,
     });
@@ -68,13 +66,10 @@ const LoginPage = () => {
   const handleStaffLogin = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const user = await axios.post(
-      "http://localhost:8080/api/user/teacher-login",
-      {
-        name,
-        password,
-      }
-    );
+    const user = await axios.post(`${BASE}/api/user/teacher-login`, {
+      name,
+      password,
+    });
 
     if (user.data.user) {
       login(user.data);
