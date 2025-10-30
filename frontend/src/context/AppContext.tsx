@@ -1,145 +1,374 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import { type User, type Quiz, type QuizResult, type Resource, type QuizAssignment, type DiscussionPost, type ChatMessage, Roles } from '../types';
-import { db } from '../data/models';
-import { usePersistentState } from '../hooks/usePersistentState';
-import { startChat } from '../services/geminiService';
-import type { Role } from '../types';
+import React, { useState, useMemo, useEffect } from "react";
+import {
+  type User,
+  type Quiz,
+  type QuizResult,
+  type Resource,
+  type QuizAssignment,
+  type DiscussionPost,
+  Roles,
+} from "../types";
+import { db } from "../data/models";
+import { usePersistentState } from "../hooks/usePersistentState";
+import { startChat } from "../services/geminiService";
+import { api } from "../services/api";
+import type { Role } from "../types";
+import axios from "axios";
+import QuizResults from "../pages/student/QuizResults";
+// import { console } from "inspector";
 
 // --- APP CONTEXT ---
 interface AppContextType {
-    currentUser: User | null;
-    login: (user: User) => void;
-    logout: () => void;
-    users: User[];
-    quizzes: Quiz[];
-    results: QuizResult[];
-    assignments: QuizAssignment[];
-    resources: Resource[];
-    discussionPosts: DiscussionPost[];
-    addQuiz: (quiz: Quiz, assignment: Omit<QuizAssignment, 'id' | 'quizId'>) => { newQuiz: Quiz, newAssignment: QuizAssignment };
-    addResult: (result: QuizResult) => void;
-    addResource: (resource: Resource) => void;
-    removeUser: (userId: string) => void;
-    updateUserPoints: (userId: string, points: number) => void;
-    addUser: (userData: { name: string; role: Role }) => User;
-    addPost: (postData: Omit<DiscussionPost, 'id' | 'createdAt' | 'replies'>) => void;
-    addReply: (postId: string, replyData: { authorId: string; content: string; }) => void;
+  currentUser: User | null;
+  login: (user: User) => void;
+  logout: () => void;
+  users: User[];
+  quizzes: Quiz[];
+  results: QuizResult[];
+  assignments: QuizAssignment[];
+  resources: Resource[];
+  discussionPosts: DiscussionPost[];
+  addQuiz: (
+    quiz: Quiz,
+    assignment: Omit<QuizAssignment, "id" | "quizId">
+  ) => { newQuiz: Quiz; newAssignment: QuizAssignment };
+  addResult: (result: QuizResult) => void;
+  addResource: (resource: Resource) => void;
+  removeUser: (userId: string) => void;
+  updateUserPoints: (userId: string, points: number) => void;
+  addPost: (
+    postData: Omit<DiscussionPost, "id" | "createdAt" | "replies">
+  ) => void;
+  addReply: (
+    postId: string,
+    replyData: { authorId: string; content: string }
+  ) => void;
 }
 
 const AppContext = React.createContext<AppContextType | null>(null);
 
 export const useAppContext = () => {
-    const context = React.useContext(AppContext);
-    if (!context) throw new Error("useAppContext must be used within an AppProvider");
-    return context;
+  const context = React.useContext(AppContext);
+  if (!context)
+    throw new Error("useAppContext must be used within an AppProvider");
+  return context;
 };
 
-export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    const [currentUser, setCurrentUser] = usePersistentState<User | null>('currentUser', null);
-    const [users, setUsers] = useState<User[]>([]);
-    const [quizzes, setQuizzes] = useState<Quiz[]>([]);
-    const [results, setResults] = useState<QuizResult[]>([]);
-    const [assignments, setAssignments] = useState<QuizAssignment[]>([]);
-    const [resources, setResources] = useState<Resource[]>([]);
-    const [discussionPosts, setDiscussionPosts] = useState<DiscussionPost[]>([]);
-    const [isDataLoaded, setIsDataLoaded] = useState(false);
+export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
+  const [currentUser, setCurrentUser] = usePersistentState<User | null>(
+    "currentUser",
+    null
+  );
+  const [users, setUsers] = useState<User[]>([]);
+  const [quizzes, setQuizzes] = useState<Quiz[]>([]);
+  const [results, setResults] = useState<QuizResult[]>([]);
+  const [assignments, setAssignments] = useState<QuizAssignment[]>([]);
+  const [resources, setResources] = useState<Resource[]>([]);
+  const [discussionPosts, setDiscussionPosts] = useState<DiscussionPost[]>([]);
+  const [isDataLoaded, setIsDataLoaded] = useState(false);
+  const [backendAvailable, setBackendAvailable] = useState(false);
 
-    useEffect(() => {
-        const data = db.getAllData();
-        setUsers(data.users);
-        setQuizzes(data.quizzes);
-        setResults(data.results);
-        setAssignments(data.assignments);
-        setResources(data.resources);
-        setDiscussionPosts(data.discussionPosts);
-        setIsDataLoaded(true);
-    }, []);
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      // Check backend health; if available, fetch from backend, otherwise fallback to local db
+      const healthy = await api.health();
+      if (!mounted) return;
+      if (healthy) {
+        setBackendAvailable(true);
+        try {
+          const [usersResp, quizzesResp, resourcesResp, postsResp] =
+            await Promise.all([
+              api.getUsers(),
+              api.getQuizzes(),
+              api.getResources(),
+              api.getPosts(),
+            ]);
 
-    const login = (user: User) => {
-        const latestUser = db.getAllData().users.find(u => u.id === user.id) || user;
-        setCurrentUser(latestUser);
-        if (latestUser.role === Roles.STUDENT) {
-            startChat(); // Initialize chatbot on student login
+          // normalize IDs (backend uses _id)
+          const normUsers = (usersResp || []).map((u: any) => ({
+            id: u._id || u.id,
+            name: u.name,
+            role: u.role,
+            points: u.points ?? 0,
+          }));
+          const normQuizzes = (quizzesResp || []).map((q: any) => ({
+            id: q._id || q.id,
+            title: q.title,
+            questionPool: q.questionPool || [],
+            createdBy: q.createdBy || q.createdBy,
+          }));
+          const normResources = (resourcesResp || []).map((r: any) => ({
+            id: r._id || r.id,
+            title: r.title,
+            content: r.content,
+            type: r.type,
+          }));
+          const normPosts = (postsResp || []).map((p: any) => ({
+            id: p._id || p.id,
+            title: p.title,
+            content: p.content,
+            authorId: p.authorId,
+            createdAt: p.createdAt,
+            replies: (p.replies || []).map((rep: any) => ({
+              id: rep._id || rep.id,
+              authorId: rep.authorId,
+              content: rep.content,
+              createdAt: rep.createdAt,
+            })),
+          }));
+
+          const resultsResp = await api.getResults().catch(() => []);
+          const assignmentsResp = await api.getAssignments().catch(() => []);
+
+          setUsers(normUsers);
+          setQuizzes(normQuizzes);
+          setResults(resultsResp || []);
+          setAssignments(assignmentsResp || []);
+          setResources(normResources);
+          setDiscussionPosts(normPosts);
+          setIsDataLoaded(true);
+          return;
+        } catch (err) {
+          console.warn(
+            "Failed to load remote data, falling back to local DB",
+            err
+          );
         }
-    };
-    const logout = () => setCurrentUser(null);
-    
-    const addQuiz = (quiz: Quiz, assignment: Omit<QuizAssignment, 'id' | 'quizId'>): { newQuiz: Quiz, newAssignment: QuizAssignment } => {
-        const { newQuiz, newAssignment } = db.addQuiz(quiz, assignment);
-        setQuizzes(prev => [...prev, newQuiz]);
-        setAssignments(prev => [...prev, newAssignment]);
-        return { newQuiz, newAssignment };
-    };
+      }
 
-    const addResult = (result: QuizResult) => {
-        const updatedResults = db.addResult(result);
-        setResults(updatedResults);
-        
-        // Award points
-        const quizResults = updatedResults.filter(r => r.quizId === result.quizId);
-        const sortedResults = quizResults.sort((a, b) => b.score - a.score || a.timeTaken - b.timeTaken);
-        const top3 = sortedResults.slice(0, 3);
-        
-        const rank = top3.findIndex(r => r.userId === result.userId);
-        if (rank !== -1) {
-            const pointsToAdd = [10, 5, 2][rank];
-            updateUserPoints(result.userId, pointsToAdd);
-        }
+      // fallback to local DB
+      const data = db.getAllData();
+      if (!mounted) return;
+      setUsers(data.users);
+      setQuizzes(data.quizzes);
+      setResults(data.results);
+      setAssignments(data.assignments);
+      setResources(data.resources);
+      setDiscussionPosts(data.discussionPosts);
+      setIsDataLoaded(true);
+    })();
+    return () => {
+      mounted = false;
     };
-    
-    const updateUserPoints = (userId: string, points: number) => {
-        const updatedUsers = db.updateUserPoints(userId, points);
-        setUsers(updatedUsers);
-    };
+  }, []);
 
-    const addResource = (resource: Resource) => {
-        const newResource = db.addResource(resource);
-        setResources(prev => [...prev, newResource]);
-    };
+  const login = async (user: any) => {
+    console.log(user.user);
 
-    const removeUser = (userId: string) => {
-        const updatedUsers = db.removeUser(userId);
-        setUsers(updatedUsers);
-    };
-
-    const addUser = (userData: { name: string; role: Role }): User => {
-        const newUser = db.addUser(userData);
-        setUsers(prev => [...prev, newUser]);
-        return newUser;
-    };
-    
-    const addPost = (postData: Omit<DiscussionPost, 'id' | 'createdAt' | 'replies'>) => {
-        const updatedPosts = db.addPost(postData);
-        setDiscussionPosts(updatedPosts);
-    };
-
-    const addReply = (postId: string, replyData: { authorId: string; content: string; }) => {
-        const updatedPosts = db.addReply(postId, replyData);
-        setDiscussionPosts(updatedPosts);
-    };
-
-    useEffect(() => {
-        if (currentUser) {
-            const updatedCurrentUser = users.find(u => u.id === currentUser.id);
-            if (updatedCurrentUser && updatedCurrentUser.points !== currentUser.points) {
-                setCurrentUser(updatedCurrentUser);
-            }
-        }
-    }, [users, currentUser]);
-
-    const contextValue = useMemo(() => ({ 
-        currentUser, login, logout, users, quizzes, results, assignments, resources, discussionPosts,
-        addQuiz, addResult, addResource, removeUser, updateUserPoints, addUser, addPost, addReply
-    }), [currentUser, users, quizzes, results, assignments, resources, discussionPosts]);
-
-    if (!isDataLoaded) {
-        // You might want a better loading state here, but for now, it prevents rendering children
-        return null;
+    setCurrentUser(user.user);
+    if (user.role === Roles.STUDENT) {
+      startChat(); // Initialize chatbot on student login
     }
+  };
+  const logout = () => setCurrentUser(null);
 
-    return (
-        <AppContext.Provider value={contextValue}>
-            {children}
-        </AppContext.Provider>
+  const addQuiz = async (
+    quiz: Quiz,
+    assignment: Omit<QuizAssignment, "id" | "quizId">
+  ): Promise<{ newQuiz: Quiz; newAssignment: QuizAssignment }> => {
+    // console.log(assignment);
+    const quizData = await axios.post("http://localhost:8080/api/create-quiz", {
+      quiz,
+      pool: quiz.questionPool,
+      assignment,
+    });
+    console.log(quizData);
+    const newQuiz = quizData.data.quiz;
+    const newAssignment = quizData.data.assignment;
+    return { newQuiz, newAssignment };
+  };
+
+  const addResult = async (result: QuizResult) => {
+    console.log(result.quizId);
+    const results = await axios.post(
+      `http://localhost:8080/api/quizzes/${result.quizId}/submit`,
+      {
+        result,
+      }
     );
+
+    console.log(results.data);
+
+    // if (backendAvailable) {
+    //   // try to submit to backend (backend expects /api/quizzes/:id/submit)
+    //   api
+    //     .submitQuizResult(result.quizId, result as any)
+    //     .then(() => {
+    //       // append to local results state
+    //       setResults((prev) => [...prev, { ...result }]);
+    //     })
+    //     .catch(() => {
+    //       const updatedResults = db.addResult(result);
+    //       setResults(updatedResults);
+    //     });
+    // } else {
+    //   const updatedResults = db.addResult(result);
+    //   setResults(updatedResults);
+    // }
+    // // Award points (local logic)
+    // const quizResults = (
+    //   backendAvailable ? [...results, result] : db.getAllData().results
+    // ).filter((r) => r.quizId === result.quizId);
+    // const sortedResults = quizResults.sort(
+    //   (a, b) => b.score - a.score || a.timeTaken - b.timeTaken
+    // );
+    // const top3 = sortedResults.slice(0, 3);
+    // const rank = top3.findIndex((r) => r.userId === result.userId);
+    // if (rank !== -1) {
+    //   const pointsToAdd = [10, 5, 2][rank];
+    //   updateUserPoints(result.userId, pointsToAdd);
+    // }
+  };
+
+  const updateUserPoints = (userId: string, points: number) => {
+    const updatedUsers = db.updateUserPoints(userId, points);
+    setUsers(updatedUsers);
+  };
+
+  const addResource = (resource: Resource) => {
+    if (backendAvailable) {
+      api
+        .addResource(resource as any)
+        .then((created: any) => {
+          setResources((prev) => [
+            ...prev,
+            { ...resource, id: created._id || created.id },
+          ]);
+        })
+        .catch(() => {
+          const newResource = db.addResource(resource);
+          setResources((prev) => [...prev, newResource]);
+        });
+      return;
+    }
+    const newResource = db.addResource(resource);
+    setResources((prev) => [...prev, newResource]);
+  };
+
+  const removeUser = async (userId: string) => {
+    const data = await axios.post("http://localhost:8080/api/delete", {
+      userId,
+    });
+    console.log(data);
+    setUsers(data.data);
+  };
+
+  const addPost = (
+    postData: Omit<DiscussionPost, "id" | "createdAt" | "replies">
+  ) => {
+    if (backendAvailable) {
+      api
+        .addPost(postData as any)
+        .then((created: any) => {
+          const mapped = {
+            id: created._id || created.id,
+            title: created.title,
+            content: created.content,
+            authorId: created.authorId,
+            createdAt: created.createdAt,
+            replies: created.replies || [],
+          } as DiscussionPost;
+          setDiscussionPosts((prev) => [mapped, ...prev]);
+        })
+        .catch(() => {
+          const updatedPosts = db.addPost(postData);
+          setDiscussionPosts(updatedPosts);
+        });
+      return;
+    }
+    const updatedPosts = db.addPost(postData);
+    setDiscussionPosts(updatedPosts);
+  };
+
+  const addReply = (
+    postId: string,
+    replyData: { authorId: string; content: string }
+  ) => {
+    if (backendAvailable) {
+      api
+        .addReply(postId, replyData as any)
+        .then((created: any) => {
+          // naive local append: refetch posts would be ideal; here we append reply locally
+          setDiscussionPosts((prev) =>
+            prev.map((p) =>
+              p.id === postId
+                ? {
+                    ...p,
+                    replies: [
+                      ...p.replies,
+                      {
+                        id: created._id || created.id,
+                        authorId: created.authorId,
+                        content: created.content,
+                        createdAt: created.createdAt,
+                      },
+                    ],
+                  }
+                : p
+            )
+          );
+        })
+        .catch(() => {
+          const updatedPosts = db.addReply(postId, replyData);
+          setDiscussionPosts(updatedPosts);
+        });
+      return;
+    }
+    const updatedPosts = db.addReply(postId, replyData);
+    setDiscussionPosts(updatedPosts);
+  };
+
+  useEffect(() => {
+    if (currentUser) {
+      const updatedCurrentUser = users.find((u) => u.id === currentUser.id);
+      if (
+        updatedCurrentUser &&
+        updatedCurrentUser.points !== currentUser.points
+      ) {
+        setCurrentUser(updatedCurrentUser);
+      }
+    }
+  }, [users, currentUser]);
+
+  const contextValue = useMemo(
+    () => ({
+      currentUser,
+      login,
+      logout,
+      users,
+      quizzes,
+      results,
+      assignments,
+      resources,
+      discussionPosts,
+      addQuiz,
+      addResult,
+      addResource,
+      removeUser,
+      updateUserPoints,
+      addPost,
+      addReply,
+    }),
+    [
+      currentUser,
+      users,
+      quizzes,
+      results,
+      assignments,
+      resources,
+      discussionPosts,
+    ]
+  );
+
+  if (!isDataLoaded) {
+    // You might want a better loading state here, but for now, it prevents rendering children
+    return null;
+  }
+
+  return (
+    <AppContext.Provider value={contextValue}>{children}</AppContext.Provider>
+  );
 };

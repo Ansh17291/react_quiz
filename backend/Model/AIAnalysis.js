@@ -6,8 +6,9 @@ const AIAnalysisSchema = mongoose.Schema({
   correctAnswer: { type: String },
   explanation: { type: String },
   remedialTopic: { type: String },
+  createdAt: { type: Date, default: Date.now },
 });
 
-const AIAnalysis = mongoose.Model("AIAnalysis", AIAnalysisSchema);
+const AIAnalysis = mongoose.model("AIAnalysis", AIAnalysisSchema);
 
 module.exports = AIAnalysis;

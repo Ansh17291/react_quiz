@@ -1,98 +1,104 @@
-import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { Roles, type Role } from '../types';
-import { useAppContext } from '../context/AppContext';
-import { useToast } from '../components/ui';
-import { Button, Card } from '../components/ui';
+import React, { useState } from "react";
+import { useNavigate, Link } from "react-router-dom";
+import { Roles, type Role } from "../types";
+import { useAppContext } from "../context/AppContext";
+import { useToast } from "../components/ui";
+import { Button, Card } from "../components/ui";
+import axios from "axios";
 
 const LoginPage = () => {
-  const { login, users, addUser } = useAppContext();
+  const { login } = useAppContext();
   const navigate = useNavigate();
   const { addToast } = useToast();
 
   const [activeRole, setActiveRole] = useState<Role>(Roles.STUDENT);
-  const [studentMode, setStudentMode] = useState<'login' | 'signup'>('login');
-  const [name, setName] = useState('');
-  const [password, setPassword] = useState('');
+  const [studentMode, setStudentMode] = useState<"login" | "signup">("login");
+  const [name, setName] = useState("");
+  const [password, setPassword] = useState("");
 
   const resetForm = () => {
-    setName('');
-    setPassword('');
+    setName("");
+    setPassword("");
   };
 
-  const handleStudentLogin = (e: React.FormEvent) => {
+  const handleStudentLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    const foundUser = users.find(
-      (u) =>
-        u.role === Roles.STUDENT &&
-        u.name.toLowerCase() === name.toLowerCase() &&
-        password === 'student'
+
+    const user = await axios.post(
+      "http://localhost:8080/api/user/student-login",
+      {
+        name,
+        password,
+      }
     );
-    if (foundUser) {
-      login(foundUser);
-      addToast(`Welcome back, ${foundUser.name}!`, 'success');
-      navigate('/student');
+
+    if (user.data.user) {
+      login(user.data);
+      addToast(`Welcome back, ${user.data.user.name}!`, "success");
+      navigate("/student");
     } else {
-      addToast('Invalid credentials or user does not exist.', 'error');
+      addToast("Invalid credentials or user does not exist.", "error");
     }
   };
 
-  const handleStudentSignUp = (e: React.FormEvent) => {
+  const handleStudentSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) {
-      addToast('Please enter a name.', 'error');
-      return;
-    }
-    if (password !== 'student') {
-      addToast('For this demo, password must be "student".', 'info');
-      return;
-    }
-    const userExists = users.some(
-      (u) => u.name.toLowerCase() === name.toLowerCase()
-    );
-    if (userExists) {
-      addToast('A user with this name already exists. Please log in.', 'error');
+      addToast("Please enter a name.", "error");
       return;
     }
 
-    const newUser = addUser({ name, role: Roles.STUDENT });
-    login(newUser);
-    addToast(`Welcome, ${name}! Your account has been created.`, 'success');
-    navigate('/student');
+    const user = await axios.post("http://localhost:8080/api/user/signup", {
+      username: name,
+      password: password,
+    });
+
+    console.log(user.data);
+
+    if (user.data?.message === "User exists") {
+      addToast("Another user exists with the same username", "error");
+      return;
+    }
+
+    addToast(`Welcome, ${name}! Your account has been created.`, "success");
+    login(user.data);
+    navigate("/student");
   };
 
-  const handleStaffLogin = (e: React.FormEvent) => {
+  const handleStaffLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    let foundUser: any;
-    const username = activeRole.toLowerCase();
 
-    if (password === username) {
-      foundUser = users.find((u) => u.role === activeRole);
-    }
+    const user = await axios.post(
+      "http://localhost:8080/api/user/teacher-login",
+      {
+        name,
+        password,
+      }
+    );
 
-    if (foundUser) {
-      login(foundUser);
-      addToast(`Welcome, ${foundUser.name}!`, 'success');
-      navigate(`/${username}`);
+    if (user.data.user) {
+      login(user.data);
+      addToast(`Welcome, ${user.data.user.name}!`, "success");
+      navigate(`/${user.data.user.name}`);
     } else {
-      addToast('Invalid credentials.', 'error');
+      addToast("Invalid credentials.", "error");
     }
   };
 
   const renderStudentForm = () => (
     <div className="transition-all duration-300">
       <div className="flex border-b border-slate-700 bg-slate-800/60 backdrop-blur-md rounded-t-md overflow-hidden">
-        {['login', 'signup'].map((mode) => (
+        {["login", "signup"].map((mode) => (
           <button
             key={mode}
             onClick={() => {
-              setStudentMode(mode as 'login' | 'signup');
+              setStudentMode(mode as "login" | "signup");
               resetForm();
             }}
             className={`flex-1 p-3 font-semibold uppercase tracking-wide transition-all duration-300 ${
               studentMode === mode
-                ? 'bg-primary-600 text-white shadow-inner'
-                : 'text-slate-400 hover:bg-slate-700'
+                ? "bg-primary-600 text-white shadow-inner"
+                : "text-slate-400 hover:bg-slate-700"
             }`}
           >
             {mode}
@@ -101,7 +107,9 @@ const LoginPage = () => {
       </div>
 
       <form
-        onSubmit={studentMode === 'login' ? handleStudentLogin : handleStudentSignUp}
+        onSubmit={
+          studentMode === "login" ? handleStudentLogin : handleStudentSignUp
+        }
         className="space-y-5 p-6"
       >
         <div>
@@ -134,7 +142,7 @@ const LoginPage = () => {
           type="submit"
           className="w-full py-3 text-lg font-bold tracking-wide bg-gradient-to-r from-primary-500 to-indigo-600 hover:from-indigo-500 hover:to-primary-500 transition-all duration-300"
         >
-          {studentMode === 'login' ? 'Log In' : 'Sign Up'}
+          {studentMode === "login" ? "Log In" : "Sign Up"}
         </Button>
         <p className="mt-3 text-xs text-slate-400 text-center">
           Hint: Use any name and password <code>student</code>.<br /> Existing
@@ -144,7 +152,7 @@ const LoginPage = () => {
     </div>
   );
 
-  const renderStaffForm = (role: 'ADMIN' | 'TEACHER') => (
+  const renderStaffForm = (role: "ADMIN" | "TEACHER") => (
     <form
       onSubmit={handleStaffLogin}
       className="space-y-5 p-6 transition-all duration-300"
@@ -155,9 +163,10 @@ const LoginPage = () => {
         </label>
         <input
           type="text"
-          value={role.toLowerCase()}
-          readOnly
-          className="w-full p-3 rounded-lg bg-slate-900/80 border border-slate-700 text-slate-400 cursor-not-allowed"
+          value={name}
+          placeholder="Enter your name"
+          onChange={(e) => setName(e.target.value)}
+          className="w-full p-3 rounded-lg bg-slate-800 border border-slate-700 text-slate-400"
         />
       </div>
       <div>
@@ -197,7 +206,7 @@ const LoginPage = () => {
 
       <Card className="w-full max-w-md backdrop-blur-md bg-slate-800/50 border border-slate-700 shadow-2xl rounded-2xl overflow-hidden transition-all duration-500 hover:border-primary-500 hover:shadow-primary-500/20">
         <div className="flex bg-slate-900/70 border-b border-slate-700">
-          {['STUDENT', 'TEACHER', 'ADMIN'].map((role) => (
+          {["STUDENT", "TEACHER", "ADMIN"].map((role) => (
             <button
               key={role}
               onClick={() => {
@@ -206,8 +215,8 @@ const LoginPage = () => {
               }}
               className={`flex-1 py-4 font-bold transition-all duration-300 ${
                 activeRole === role
-                  ? 'bg-gradient-to-r from-primary-600 to-indigo-600 text-white'
-                  : 'bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-white'
+                  ? "bg-gradient-to-r from-primary-600 to-indigo-600 text-white"
+                  : "bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-white"
               }`}
             >
               {role}

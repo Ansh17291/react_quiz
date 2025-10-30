@@ -7,6 +7,7 @@ export const Roles = {
 export type Role = typeof Roles[keyof typeof Roles];
 
 export interface User {
+  _id: string;
   id: string;
   name: string;
   role: Role;
@@ -21,6 +22,7 @@ export interface Question {
 }
 
 export interface Quiz {
+  _id: string;
   id: string;
   title: string;
   questionPool: Question[]; // Changed from 'questions' to 'questionPool'
@@ -28,7 +30,7 @@ export interface Quiz {
 }
 
 export interface QuizAssignment {
-  id:string;
+  id: string;
   quizId: string;
   studentIds: string[]; // 'ALL' or array of user IDs
   deadline: string; // ISO string
@@ -61,10 +63,10 @@ export interface AIAnalysis {
 }
 
 export interface Resource {
-    id: string;
-    title: string;
-    content: string;
-    type: 'text' | 'notes';
+  id: string;
+  title: string;
+  content: string;
+  type: 'text' | 'notes';
 }
 
 export interface DiscussionReply {
@@ -75,7 +77,7 @@ export interface DiscussionReply {
 }
 
 export interface DiscussionPost {
-  id:string;
+  id: string;
   title: string;
   content: string;
   authorId: string;

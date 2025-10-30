@@ -6,7 +6,7 @@ const DiscussionReplySchema = mongoose.Schema({
   createdAt: { type: Date, default: Date.now },
 });
 
-const DiscussionReply = mongoose.Model(
+const DiscussionReply = mongoose.model(
   "DiscussionReply",
   DiscussionReplySchema
 );
