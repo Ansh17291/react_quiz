@@ -29,9 +29,12 @@ const StudentDashboard = () => {
   const [isLoading, setIsLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
 
+  // Get the correct user ID (handle both _id and id)
+  const currentUserId = currentUser?._id || currentUser?.id;
+
   const studentResults = React.useMemo(() => {
-    return results.filter((r) => r.userId === currentUser?._id);
-  }, [results, currentUser?._id]);
+    return results.filter((r) => r.userId === currentUserId);
+  }, [results, currentUserId]);
 
   const avgScore = React.useMemo(() => {
     return studentResults.length > 0
@@ -43,14 +46,14 @@ const StudentDashboard = () => {
   }, [studentResults]);
 
   const overallRank = React.useMemo(() => {
-    if (!currentUser?._id || users.length === 0) return "N/A";
+    if (!currentUserId || users.length === 0) return "N/A";
     return (
       users
         .filter((u) => u.role === "STUDENT")
         .sort((a, b) => b.points - a.points)
-        .findIndex((u) => u._id === currentUser._id) + 1
+        .findIndex((u) => (u._id || u.id) === currentUserId) + 1
     );
-  }, [users, currentUser?._id]);
+  }, [users, currentUserId]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -74,10 +77,10 @@ const StudentDashboard = () => {
         setAssignments(assignmentsRes.data);
 
         // Filter assignments for the current student
-        const studentAssignmentsData = assignmentsRes.data.filter((a) =>
-          a.studentIds.includes(currentUser?._id)
+        const studentAssignmentsData = assignmentsRes.data.filter((a: any) =>
+          a.studentIds.includes(currentUserId)
         );
-        console.log("Current user ID:", currentUser?._id);
+        console.log("Current user ID:", currentUserId);
         console.log("Assignments before filter:", assignmentsRes.data);
         console.log("Filtered assignments:", studentAssignmentsData);
 
@@ -90,10 +93,10 @@ const StudentDashboard = () => {
       }
     };
 
-    if (currentUser?._id) {
+    if (currentUserId) {
       fetchData();
     }
-  }, [currentUser?._id]);
+  }, [currentUserId]);
 
   return (
     <AnimatedWrapper className="space-y-8">
@@ -128,7 +131,7 @@ const StudentDashboard = () => {
                   if (!quiz) return null;
                   return (
                     <div
-                      key={assignment.id}
+                      key={assignment._id || assignment.id}
                       className="p-4 bg-slate-700/50 rounded-lg flex justify-between items-center hover:bg-slate-700 transition-colors"
                     >
                       <div>
@@ -207,7 +210,12 @@ const StudentDashboard = () => {
             <h3 className="text-xl font-semibold mb-4">Quick Links</h3>
             <div className="flex flex-col gap-3">
               <Button
-                onClick={() => navigate(`/student/${currentUser!.id}`)}
+                onClick={() => {
+                  console.log("Current user:", currentUser);
+                  console.log("User ID:", currentUserId);
+                  // Use the correct ID field
+                  navigate(`/student/${currentUserId}`);
+                }}
                 variant="secondary"
                 className="w-full"
               >

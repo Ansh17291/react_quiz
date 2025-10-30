@@ -14,8 +14,6 @@ import { startChat } from "../services/geminiService";
 import { api } from "../services/api";
 import type { Role } from "../types";
 import axios from "axios";
-import QuizResults from "../pages/student/QuizResults";
-// import { console } from "inspector";
 
 // --- APP CONTEXT ---
 interface AppContextType {
@@ -54,6 +52,15 @@ export const useAppContext = () => {
   return context;
 };
 
+// Helper function to normalize user data
+const normalizeUser = (user: any): User => ({
+  id: user._id || user.id,
+  _id: user._id || user.id, // Keep _id for backend compatibility
+  name: user.name,
+  role: user.role,
+  points: user.points ?? 0,
+});
+
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
@@ -88,32 +95,31 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
             ]);
 
           // normalize IDs (backend uses _id)
-          const normUsers = (usersResp || []).map((u: any) => ({
-            id: u._id || u.id,
-            name: u.name,
-            role: u.role,
-            points: u.points ?? 0,
-          }));
+          const normUsers = (usersResp || []).map((u: any) => normalizeUser(u));
           const normQuizzes = (quizzesResp || []).map((q: any) => ({
             id: q._id || q.id,
+            _id: q._id || q.id,
             title: q.title,
             questionPool: q.questionPool || [],
             createdBy: q.createdBy || q.createdBy,
           }));
           const normResources = (resourcesResp || []).map((r: any) => ({
             id: r._id || r.id,
+            _id: r._id || r.id,
             title: r.title,
             content: r.content,
             type: r.type,
           }));
           const normPosts = (postsResp || []).map((p: any) => ({
             id: p._id || p.id,
+            _id: p._id || p.id,
             title: p.title,
             content: p.content,
             authorId: p.authorId,
             createdAt: p.createdAt,
             replies: (p.replies || []).map((rep: any) => ({
               id: rep._id || rep.id,
+              _id: rep._id || rep.id,
               authorId: rep.authorId,
               content: rep.content,
               createdAt: rep.createdAt,
@@ -156,20 +162,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
   }, []);
 
   const login = async (user: any) => {
-    console.log(user.user);
+    console.log("Login user:", user);
 
-    setCurrentUser(user.user);
-    if (user.role === Roles.STUDENT) {
+    // Normalize the user object to ensure both id and _id exist
+    const normalizedUser = normalizeUser(user.user || user);
+    console.log("Normalized user:", normalizedUser);
+
+    setCurrentUser(normalizedUser);
+
+    if (normalizedUser.role === Roles.STUDENT) {
       startChat(); // Initialize chatbot on student login
     }
   };
+
   const logout = () => setCurrentUser(null);
 
   const addQuiz = async (
     quiz: Quiz,
     assignment: Omit<QuizAssignment, "id" | "quizId">
   ): Promise<{ newQuiz: Quiz; newAssignment: QuizAssignment }> => {
-    // console.log(assignment);
     const quizData = await axios.post("http://localhost:8080/api/create-quiz", {
       quiz,
       pool: quiz.questionPool,
@@ -182,7 +193,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
   };
 
   const addResult = async (result: QuizResult) => {
-    console.log(result.quizId);
+    console.log("Adding result for quiz:", result.quizId);
     const results = await axios.post(
       `http://localhost:8080/api/quizzes/${result.quizId}/submit`,
       {
@@ -190,37 +201,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
       }
     );
 
-    console.log(results.data);
-
-    // if (backendAvailable) {
-    //   // try to submit to backend (backend expects /api/quizzes/:id/submit)
-    //   api
-    //     .submitQuizResult(result.quizId, result as any)
-    //     .then(() => {
-    //       // append to local results state
-    //       setResults((prev) => [...prev, { ...result }]);
-    //     })
-    //     .catch(() => {
-    //       const updatedResults = db.addResult(result);
-    //       setResults(updatedResults);
-    //     });
-    // } else {
-    //   const updatedResults = db.addResult(result);
-    //   setResults(updatedResults);
-    // }
-    // // Award points (local logic)
-    // const quizResults = (
-    //   backendAvailable ? [...results, result] : db.getAllData().results
-    // ).filter((r) => r.quizId === result.quizId);
-    // const sortedResults = quizResults.sort(
-    //   (a, b) => b.score - a.score || a.timeTaken - b.timeTaken
-    // );
-    // const top3 = sortedResults.slice(0, 3);
-    // const rank = top3.findIndex((r) => r.userId === result.userId);
-    // if (rank !== -1) {
-    //   const pointsToAdd = [10, 5, 2][rank];
-    //   updateUserPoints(result.userId, pointsToAdd);
-    // }
+    console.log("Result submitted:", results.data);
   };
 
   const updateUserPoints = (userId: string, points: number) => {
@@ -235,7 +216,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
         .then((created: any) => {
           setResources((prev) => [
             ...prev,
-            { ...resource, id: created._id || created.id },
+            {
+              ...resource,
+              id: created._id || created.id,
+              _id: created._id || created.id,
+            },
           ]);
         })
         .catch(() => {
@@ -252,8 +237,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
     const data = await axios.post("http://localhost:8080/api/delete", {
       userId,
     });
-    console.log(data);
-    setUsers(data.data);
+    console.log("User removed:", data);
+    // Normalize the returned users
+    const normalizedUsers = data.data.map((u: any) => normalizeUser(u));
+    setUsers(normalizedUsers);
   };
 
   const addPost = (
@@ -265,6 +252,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
         .then((created: any) => {
           const mapped = {
             id: created._id || created.id,
+            _id: created._id || created.id,
             title: created.title,
             content: created.content,
             authorId: created.authorId,
@@ -294,13 +282,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
           // naive local append: refetch posts would be ideal; here we append reply locally
           setDiscussionPosts((prev) =>
             prev.map((p) =>
-              p.id === postId
+              p.id === postId || p._id === postId
                 ? {
                     ...p,
                     replies: [
                       ...p.replies,
                       {
                         id: created._id || created.id,
+                        _id: created._id || created.id,
                         authorId: created.authorId,
                         content: created.content,
                         createdAt: created.createdAt,
@@ -323,12 +312,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
 
   useEffect(() => {
     if (currentUser) {
-      const updatedCurrentUser = users.find((u) => u.id === currentUser.id);
+      const userId = currentUser._id || currentUser.id;
+      const updatedCurrentUser = users.find((u) => (u.id || u._id) === userId);
       if (
         updatedCurrentUser &&
         updatedCurrentUser.points !== currentUser.points
       ) {
-        setCurrentUser(updatedCurrentUser);
+        setCurrentUser(normalizeUser(updatedCurrentUser));
       }
     }
   }, [users, currentUser]);
@@ -364,7 +354,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
   );
 
   if (!isDataLoaded) {
-    // You might want a better loading state here, but for now, it prevents rendering children
     return null;
   }
 

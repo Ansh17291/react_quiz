@@ -51,6 +51,24 @@ app.get("/api/results", async (req, res) => {
   res.json(results);
 });
 
+app.get("/api/discussions", async (req, res) => {
+  const discussionsPost = await DiscussionPost.find();
+  const discussionsReply = await DiscussionReply.find();
+  res.json({ post: discussionsPost, reply: discussionsReply });
+});
+
+app.post("/api/discussions", async (req, res) => {
+  console.log(req.body);
+
+  const discussion = DiscussionPost.create({
+    title: req.body.title,
+    content: req.body.content,
+    authorId: req.body.authorId,
+  });
+
+  res.json(discussion);
+});
+
 app.get("/api/assignment/:id", async (req, res) => {
   const assignmentId = req.params.id;
 
@@ -58,6 +76,16 @@ app.get("/api/assignment/:id", async (req, res) => {
   const results = await QuizAssignment.findById(assignmentId);
 
   res.json(results);
+});
+
+app.get("/api/users/:id", async (req, res) => {
+  const userId = req.params.id;
+
+  // Example: filter results by assignmentId
+  const user = await User.findById(userId);
+
+  console.log(user);
+  res.json(user);
 });
 
 app.get("/api/quizzes", async (req, res) => {
