@@ -324,6 +324,29 @@ app.post("/api/user/teacher-login", async (req, res) => {
   res.json({ user, token });
 });
 
+app.post("/api/user/teacher-signup", async (req, res) => {
+  const name = req.body.username;
+  const password = req.body.password;
+
+  // Check for existing user
+  const existingUser = await User.findOne({ name });
+  if (existingUser) {
+    return res.status(400).json({ error: "User already exists" });
+  }
+
+  // Create new user
+  // const hashedPassword = await bcrypt.hash(password, 12);
+  const newUser = await User.create({
+    name,
+    password,
+    role: "TEACHER",
+  });
+
+  const token = signToken(newUser);
+  res.status(201).json({ user: newUser, token });
+});
+
+
 // Resources
 app.get("/api/resources", async (req, res) => {
   const items = await Resource.find().lean();

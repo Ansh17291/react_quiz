@@ -27,6 +27,7 @@ const AdminDashboard = () => {
   const [activeTab, setActiveTab] = useState("Create Quiz");
 
   const students = useRef<any>([]);
+  const teachers = useRef<any>([]);
 
   const [isCreating, setIsCreating] = useState(false);
   const [quizText, setQuizText] = useState("");
@@ -53,6 +54,12 @@ const AdminDashboard = () => {
   );
   const [isLiveQuiz, setIsLiveQuiz] = useState(false);
 
+  // Teacher modal states
+  const [isAddTeacherModalOpen, setIsAddTeacherModalOpen] = useState(false);
+  const [newTeacherName, setNewTeacherName] = useState("");
+  const [newTeacherPassword, setNewTeacherPassword] = useState("");
+  const [isAddingTeacher, setIsAddingTeacher] = useState(false);
+
   useEffect(() => {
     const fetchData = async () => {
       const data = await api.getUsers();
@@ -62,7 +69,14 @@ const AdminDashboard = () => {
     fetchData();
   }, []);
 
-  //   const students = users.filter();
+  useEffect(() => {
+    const fetchData = async () => {
+      const data = await api.getUsers();
+      console.log(data);
+      teachers.current = (data || []).filter((u) => u.role === "TEACHER");
+    };
+    fetchData();
+  }, []);
 
   const openAssignModal = (quiz: Quiz) => {
     setQuizToAssign(quiz);
@@ -176,7 +190,6 @@ const AdminDashboard = () => {
           "info"
         );
       }
-      // Also add to resources list so it appears for students
       if (data.fileUrl) {
         addResource({
           _id: `res-${Date.now()}`,
@@ -210,7 +223,6 @@ const AdminDashboard = () => {
       });
       if (!resp.ok) throw new Error(`Upload failed: ${resp.status}`);
       const resource = await resp.json();
-      // Normalize the resource id fields for the context
       addResource({
         ...(resource as any),
         _id: resource._id || resource.id,
@@ -311,12 +323,76 @@ const AdminDashboard = () => {
     }
   };
 
+  const handleRevokeTeacher = (userId: string) => {
+    if (
+      window.confirm("Are you sure you want to revoke this teacher's access?")
+    ) {
+      removeUser(userId);
+      addToast("Teacher access revoked.", "success");
+      // Refresh the teachers list
+      teachers.current = teachers.current.filter((t) => t._id !== userId);
+    }
+  };
+
+  const handleAddTeacher = async () => {
+    if (!newTeacherName.trim() || !newTeacherPassword.trim()) {
+      addToast("Please provide both username and password.", "error");
+      return;
+    }
+
+    if (newTeacherPassword.length < 6) {
+      addToast("Password must be at least 6 characters long.", "error");
+      return;
+    }
+
+    setIsAddingTeacher(true);
+    try {
+      const response = await fetch(`${BASE}/api/user/teacher-signup`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          username: newTeacherName,
+          password: newTeacherPassword,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to add teacher");
+      }
+
+      const newTeacher = await response.json();
+      teachers.current = [...teachers.current, newTeacher];
+      
+      addToast(
+        `Teacher "${newTeacherName}" added successfully!`,
+        "success"
+      );
+      addToast(
+        `Credentials - Username: ${newTeacherName}, Password: ${newTeacherPassword}`,
+        "info"
+      );
+
+      // Reset form and close modal
+      setNewTeacherName("");
+      setNewTeacherPassword("");
+      setIsAddTeacherModalOpen(false);
+    } catch (err) {
+      console.error(err);
+      addToast((err as Error).message || "Failed to add teacher", "error");
+    } finally {
+      setIsAddingTeacher(false);
+    }
+  };
+
   return (
     <AnimatedWrapper className="space-y-8">
       <h2 className="text-3xl font-bold">Admin Dashboard</h2>
       <div>
         <Tabs
-          tabs={["Create Quiz", "Manage Students"]}
+          tabs={["Create Quiz", "Manage Students", "Manage Teachers"]}
           activeTab={activeTab}
           setActiveTab={setActiveTab}
         />
@@ -603,9 +679,40 @@ const AdminDashboard = () => {
               </StaggeredList>
             </Card>
           )}
+          {activeTab === "Manage Teachers" && (
+            <Card>
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-xl font-semibold">Teacher Roster</h3>
+                <Button
+                  onClick={() => setIsAddTeacherModalOpen(true)}
+                  variant="secondary"
+                >
+                  <PlusCircleIcon className="w-5 h-5" />
+                  Add Teacher
+                </Button>
+              </div>
+              <StaggeredList className="space-y-2">
+                {teachers.current.map((teacher) => (
+                  <div
+                    key={teacher._id}
+                    className="flex justify-between items-center p-3 bg-slate-700 rounded-lg"
+                  >
+                    <span>{teacher.name}</span>
+                    <Button
+                      variant="danger"
+                      onClick={() => handleRevokeTeacher(teacher._id)}
+                    >
+                      Revoke Access
+                    </Button>
+                  </div>
+                ))}
+              </StaggeredList>
+            </Card>
+          )}
         </div>
       </div>
 
+      {/* Assign Quiz Modal */}
       <Modal
         isOpen={isAssignModalOpen}
         onClose={() => setIsAssignModalOpen(false)}
@@ -668,6 +775,60 @@ const AdminDashboard = () => {
           )}
           <Button onClick={handleAssignQuiz} className="w-full">
             Confirm Assignment
+          </Button>
+        </div>
+      </Modal>
+
+      {/* Add Teacher Modal */}
+      <Modal
+        isOpen={isAddTeacherModalOpen}
+        onClose={() => {
+          setIsAddTeacherModalOpen(false);
+          setNewTeacherName("");
+          setNewTeacherPassword("");
+        }}
+        title="Add New Teacher"
+      >
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium mb-2">
+              Teacher Username
+            </label>
+            <input
+              type="text"
+              value={newTeacherName}
+              onChange={(e) => setNewTeacherName(e.target.value)}
+              placeholder="Enter username"
+              className="w-full p-2 border rounded-md bg-slate-700 border-slate-600 focus:ring-primary-500 focus:border-primary-500"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-2">
+              Password
+            </label>
+            <input
+              type="password"
+              value={newTeacherPassword}
+              onChange={(e) => setNewTeacherPassword(e.target.value)}
+              placeholder="Enter password (min 6 characters)"
+              className="w-full p-2 border rounded-md bg-slate-700 border-slate-600 focus:ring-primary-500 focus:border-primary-500"
+            />
+            <p className="text-xs text-slate-400 mt-1">
+              Make sure to save these credentials - they will be shown once after creation
+            </p>
+          </div>
+          <Button 
+            onClick={handleAddTeacher} 
+            className="w-full"
+            disabled={isAddingTeacher}
+          >
+            {isAddingTeacher ? (
+              <>
+                <Spinner /> Adding Teacher...
+              </>
+            ) : (
+              "Add Teacher"
+            )}
           </Button>
         </div>
       </Modal>
