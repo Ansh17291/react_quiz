@@ -9,13 +9,18 @@ const multer = require("multer");
 const XLSX = require("xlsx");
 const mammoth = require("mammoth");
 
+const aes256 = require("aes256");
+const { encryptString, decryptString } = require("./utils/crypto");
+
+const encryptKey = process.env.ENCRYPT_KEY || "my passphrase";
+
 const app = express();
 const PORT = process.env.PORT || 8080;
 
 // middleware
 app.use(cors());
-app.use(express.json());
 app.use(morgan("dev"));
+app.use(express.json());
 // serve uploaded files statically
 const UPLOAD_DIR = path.join(__dirname, "uploads");
 if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR);
@@ -71,6 +76,77 @@ app.get("/api/assignment", async (req, res) => {
   res.json(assignments);
 });
 
+// Create an assignment (intended for admins)
+app.post("/api/assignments", async (req, res) => {
+  try {
+    const payload = req.body || {};
+    const {
+      quizId,
+      studentIds,
+      deadline,
+      timeLimit,
+      numQuestionsToAssign,
+      isLive,
+    } = payload;
+    if (!quizId || !Array.isArray(studentIds)) {
+      return res
+        .status(400)
+        .json({ error: "quizId and studentIds are required" });
+    }
+    const assignment = await QuizAssignment.create({
+      quizId,
+      studentIds,
+      deadline,
+      timeLimit,
+      numQuestionsToAssign,
+      isLive,
+    });
+    res.status(201).json(assignment);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: "Failed to create assignment" });
+  }
+});
+
+// Fetch assignment for a specific quiz
+app.get("/api/assignments/by-quiz/:quizId", async (req, res) => {
+  try {
+    const quizId = req.params.quizId;
+    const assignment = await QuizAssignment.findOne({ quizId });
+    res.json(assignment || null);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: "Failed to fetch assignment" });
+  }
+});
+
+// Update (or create) assignment for a specific quiz
+app.put("/api/assignments/by-quiz/:quizId", async (req, res) => {
+  try {
+    const quizId = req.params.quizId;
+    const { studentIds, deadline, timeLimit, isLive } = req.body || {};
+    if (!Array.isArray(studentIds)) {
+      return res.status(400).json({ error: "studentIds array is required" });
+    }
+    const update = {
+      quizId,
+      studentIds,
+      deadline,
+      timeLimit,
+      isLive,
+    };
+    const assignment = await QuizAssignment.findOneAndUpdate(
+      { quizId },
+      update,
+      { new: true, upsert: true }
+    );
+    res.json(assignment);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: "Failed to update assignment" });
+  }
+});
+
 app.get("/api/results", async (req, res) => {
   const results = await QuizResult.find();
   res.json(results);
@@ -96,7 +172,7 @@ app.post("/api/discussions", async (req, res) => {
 
 app.post("/api/discussions/reply", async (req, res) => {
   try {
-    const { postId, authorId, content } = req.body;
+    const { postId, authorId, content } = req.body.optimistic;
 
     // Create the reply
     const createReply = await DiscussionReply.create({
@@ -133,17 +209,22 @@ app.get("/api/assignment/:id", async (req, res) => {
 
 app.get("/api/users/:id", async (req, res) => {
   const userId = req.params.id;
-
-  // Example: filter results by assignmentId
-  const user = await User.findById(userId);
-
-  console.log(user);
+  const user = await User.findById(userId).lean();
+  if (!user) return res.status(404).json({ error: "User not found" });
   res.json(user);
 });
 
 app.get("/api/quizzes", async (req, res) => {
-  const quiz = await Quiz.find().populate("questionPool");
-  res.json(quiz);
+  const quizzes = await Quiz.find().populate("questionPool").lean();
+  const decrypted = (quizzes || []).map((q) => ({
+    ...q,
+    questionPool: (q.questionPool || []).map((ques) => ({
+      ...ques,
+      questionText: decryptString(ques.questionText),
+      options: (ques.options || []).map((o) => decryptString(o)),
+    })),
+  }));
+  res.json(decrypted);
 });
 
 app.post("/api/quizzes/:quizID/submit", async (req, res) => {
@@ -158,9 +239,48 @@ app.post("/api/quizzes/:quizID/submit", async (req, res) => {
   res.json(results);
 });
 
+// Create a quiz (intended for teachers)
+app.post("/api/quizzes", async (req, res) => {
+  try {
+    const quiz = req.body || {};
+    if (!quiz.title || !Array.isArray(quiz.questions)) {
+      return res
+        .status(400)
+        .json({ error: "title and questions are required" });
+    }
+
+    const questionIds = await Promise.all(
+      (quiz.questions || []).map(async (q) => {
+        const created = await Question.create({
+          questionText: encryptString(q.questionText),
+          options: (q.options || []).map((opt) => encryptString(opt)),
+          correctAnswerIndex: q.correctAnswerIndex,
+        });
+        return created._id;
+      })
+    );
+
+    const newQuiz = await Quiz.create({
+      title: quiz.title,
+      questionPool: questionIds,
+    });
+
+    res.status(201).json(newQuiz);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: "Failed to create quiz" });
+  }
+});
+
 app.post("/api/users", async (req, res) => {
-  const data = req.body;
-  const user = await User.create(data);
+  const data = req.body || {};
+  const name = data.username || data.name;
+  const user = await User.create({
+    name,
+    role: data.role,
+    password: data.password,
+    points: data.points,
+  });
   res.status(201).json(user);
 });
 
@@ -225,7 +345,15 @@ app.get("/api/posts", async (req, res) => {
 app.get("/api/quizzes", async (req, res) => {
   try {
     const quizzes = await Quiz.find().populate("questionPool").lean();
-    res.json(quizzes);
+    const decrypted = (quizzes || []).map((q) => ({
+      ...q,
+      questionPool: (q.questionPool || []).map((ques) => ({
+        ...ques,
+        questionText: decryptString(ques.questionText),
+        options: (ques.options || []).map((o) => decryptString(o)),
+      })),
+    }));
+    res.json(decrypted);
   } catch (e) {
     console.error(e);
     res.status(500).json({ error: "Failed to load quizzes" });
@@ -298,8 +426,7 @@ app.post(
 app.post("/api/delete", async (req, res) => {
   const user = await User.findByIdAndDelete(req.body.userId);
   console.log(user);
-  const users = await User.find({});
-
+  const users = await User.find({}).lean();
   res.status(201).json(users);
 });
 
@@ -310,8 +437,8 @@ app.post("/api/create-quiz", async (req, res) => {
     const questionIds = await Promise.all(
       req.body.pool.map(async (individual) => {
         const question = await Question.create({
-          questionText: individual.questionText,
-          options: individual.options,
+          questionText: encryptString(individual.questionText),
+          options: (individual.options || []).map((ans) => encryptString(ans)),
           correctAnswerIndex: individual.correctAnswerIndex,
         });
         return question._id;
@@ -343,9 +470,12 @@ app.post("/api/user/signup", async (req, res) => {
   const name = req.body.username;
   const password = req.body.password;
 
-  const does_exits = await User.findOne({ name });
-  if (does_exits) {
-    res.json({ message: "User exists" });
+  if (!name || !password)
+    return res.status(400).json({ error: "username and password required" });
+
+  const exists = await User.findOne({ name });
+  if (exists) {
+    return res.status(409).json({ message: "User exists" });
   }
 
   const user = await User.create({
