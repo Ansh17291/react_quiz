@@ -25,12 +25,14 @@ export interface Quiz {
   _id: string;
   id: string;
   title: string;
+  newAssignment: any;
   questionPool: Question[]; // Changed from 'questions' to 'questionPool'
   createdBy: 'AI' | 'MANUAL';
 }
 
 export interface QuizAssignment {
   id: string;
+  _id: string;
   quizId: string;
   studentIds: string[]; // 'ALL' or array of user IDs
   deadline: string; // ISO string

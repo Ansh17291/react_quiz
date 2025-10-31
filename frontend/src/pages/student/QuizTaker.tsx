@@ -89,10 +89,10 @@ const QuizTaker = () => {
     // 1. Get question pool and shuffle it
     const shuffledPool = shuffleArray(quiz.questionPool);
     // 2. Slice the required number of questions
-    const assignedQuestions = shuffledPool.slice(
-      0,
-      assignment.numQuestionsToAssign
-    );
+    const assignedQuestions = shuffledPool
+      .slice(0, assignment.numQuestionsToAssign)
+      // extra shuffle so subset order also appears random
+      .sort(() => Math.random() - 0.5);
     // 3. Shuffle options for each question and update correct index
     const readyQuestions = assignedQuestions.map((q: any) => {
       // Use _id if id doesn't exist
@@ -120,7 +120,9 @@ const QuizTaker = () => {
     });
 
     console.log("Ready questions:", readyQuestions);
-    setActiveQuestions(readyQuestions);
+    // Randomize final question order for display
+    const randomizedQuestions = shuffleArray(readyQuestions);
+    setActiveQuestions(randomizedQuestions);
     const timeLimitInSeconds =
       (assignment.timeLimit || readyQuestions.length) * 60;
     setTimeLeft(timeLimitInSeconds);

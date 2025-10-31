@@ -27,7 +27,7 @@ interface AppContextType {
   discussionPosts: DiscussionPost[];
   addQuiz: (
     quiz: Quiz,
-    assignment: Omit<QuizAssignment, "id" | "quizId">
+    assignment: Omit<QuizAssignment, "id" | "quizId" | "_id">
   ) => Promise<{ newQuiz: Quiz; newAssignment: QuizAssignment }>;
   addResult: (result: QuizResult) => void;
   addResource: (resource: Resource) => void;

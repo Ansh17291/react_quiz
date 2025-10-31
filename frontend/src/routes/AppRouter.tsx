@@ -7,7 +7,7 @@ import {
   useLocation,
 } from "react-router-dom";
 import { useAppContext } from "../context/AppContext";
-import { Roles, type Role } from "../types";
+import { Roles } from "../types";
 
 import HomePage from "../HomePage";
 import LoginPage from "../pages/LoginPage";

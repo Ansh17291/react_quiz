@@ -1,8 +1,8 @@
 import { GoogleGenAI, Type, Chat } from "@google/genai";
-import type { Question, AIAnalysis, ChatMessage } from '../types';
+import type { Question, AIAnalysis } from '../types';
 
-if (! import.meta.env.VITE_API_KEY ) {
-  console.warn("API_KEY environment variable not set. Using a placeholder. AI features will not work.");
+if (! import.meta.env.VITE_API_KEY) {
+    console.warn("API_KEY environment variable not set. Using a placeholder. AI features will not work.");
 }
 
 const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_API_KEY || "DUMMY_KEY_FOR_DEV" });
@@ -57,7 +57,7 @@ export const generateQuizFromText = async (text: string, numQuestions: number = 
             throw new Error("AI did not return a valid response.");
         }
         const parsed = JSON.parse(jsonString!);
-        
+
         return { title: parsed.quizTitle, questions: parsed.questions };
     } catch (error) {
         console.error("Error generating quiz:", error);
@@ -90,7 +90,7 @@ export const generateQuizFromTopics = async (topics: string[], numQuestions: num
             throw new Error("AI did not return a valid response.");
         }
         const parsed = JSON.parse(jsonString);
-        
+
         return { title: parsed.quizTitle, questions: parsed.questions };
     } catch (error) {
         console.error("Error generating remedial quiz:", error);
@@ -132,7 +132,7 @@ export const generateSimilarQuestions = async (baseQuestion: Omit<Question, 'id'
             throw new Error("AI did not return a valid response.");
         }
         const parsed = JSON.parse(jsonString!);
-        
+
         return parsed.questions || [];
     } catch (error) {
         console.error("Error generating similar questions:", error);
@@ -187,7 +187,7 @@ Provide a brief explanation why the student's answer is incorrect and why the co
 export const generateNotes = async (topic: string): Promise<string> => {
     try {
         const prompt = `Generate: any concise, easy-to-understand study notes for a student on the following topic: "${topic}". Use HTML tags like <h3> for headings, <ul> and <li> for bullet points, and <b> for bold text to structure the notes for better readability. Do not include \`\`\`html or any markdown formatting. Output only the raw HTML content that can be placed inside a <div>.`;
-        
+
         const response = await ai.models.generateContent({
             model: 'gemini-2.5-flash',
             contents: prompt,
@@ -210,11 +210,11 @@ export const startChat = () => {
     });
 };
 
-export const sendMessageToBot = async (history: ChatMessage[], message: string) => {
+export const sendMessageToBot = async (message: string) => {
     if (!chat) {
         startChat();
     }
-    
+
     // The `sendMessageStream` is better for real-time chat UI updates.
     const result = await chat!.sendMessageStream({ message });
     return result;

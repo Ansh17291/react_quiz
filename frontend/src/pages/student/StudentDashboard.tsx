@@ -132,7 +132,7 @@ const StudentDashboard = () => {
                   return (
                     <div
                       key={assignment._id || assignment.id}
-                      className="p-4 bg-slate-700/50 rounded-lg flex justify-between items-center hover:bg-slate-700 transition-colors"
+                      className="p-4 bg-slate-700/50 rounded-lg flex justify-between items-center hover:bg-slate-700 transition-colors transition-transform duration-150 ease-out hover:scale-[1.01]"
                     >
                       <div>
                         <p className="font-semibold text-lg">

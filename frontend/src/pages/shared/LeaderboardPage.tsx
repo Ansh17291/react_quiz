@@ -5,11 +5,11 @@ import {
   AnimatedWrapper,
   StaggeredList,
 } from "../../components/shared/AnimatedComponents";
-import { Card, Tabs } from "../../components/ui";
-import { TrophyIcon, ChartBarIcon } from "../../components/Icons";
-import { api } from "../../services/api";
+import { Card, Tabs, useToast } from "../../components/ui";
+import { TrophyIcon } from "../../components/Icons";
 
 const LeaderboardPage = () => {
+  const { addToast } = useToast();
   const { quizId } = useParams<{ quizId?: string }>();
   const { users, quizzes, results } = useAppContext();
   const navigate = useNavigate();
@@ -73,7 +73,9 @@ const LeaderboardPage = () => {
         return (a.timeTaken || 0) - (b.timeTaken || 0);
       })
       .map((result) => {
-        const user = students.current.find((u) => (u._id || (u as any).id) === result.userId);
+        const user = students.current.find(
+          (u) => (u._id || (u as any).id) === result.userId
+        );
         return {
           user,
           result,
@@ -121,7 +123,7 @@ const LeaderboardPage = () => {
                   {overallLeaderboard.current.map((student, index) => (
                     <div
                       key={student._id}
-                      className="flex justify-between items-center p-3 bg-slate-700/50 rounded-lg"
+                      className="flex justify-between items-center p-3 bg-slate-700/50 rounded-lg hover:bg-slate-700 transition-transform duration-150 ease-out hover:scale-[1.01]"
                     >
                       <span className="font-medium text-lg flex items-center gap-3">
                         <span
@@ -131,7 +133,17 @@ const LeaderboardPage = () => {
                         >
                           {rankBadges[index] || index + 1}
                         </span>
-                        {student.name}
+                        <button
+                          className="underline text-primary-300 hover:text-primary-200"
+                          onClick={() => {
+                            if (student._id) {
+                              addToast(`Viewing ${student.name}'s profile`, "info");
+                              navigate(`/student/${student._id}`);
+                            }
+                          }}
+                        >
+                          {student.name}
+                        </button>
                       </span>
                       <span className="font-bold text-yellow-400 text-lg flex items-center gap-1">
                         <TrophyIcon className="w-5 h-5" />
@@ -225,7 +237,9 @@ const LeaderboardPage = () => {
                               </span>
                               <button
                                 className="underline text-primary-300 hover:text-primary-200"
-                                onClick={() => user?._id && navigate(`/student/${user._id}`)}
+                                onClick={() =>
+                                  user?._id && navigate(`/student/${user._id}`)
+                                }
                               >
                                 {user?.name || "Unknown Student"}
                               </button>

@@ -1,7 +1,7 @@
-import React, { useEffect, useState } from 'react';
-import { AnimatedWrapper } from '../../components/shared/AnimatedComponents';
-import { Card } from '../../components/ui';
-import { api } from '../../services/api';
+import { useEffect, useState } from "react";
+import { AnimatedWrapper } from "../../components/shared/AnimatedComponents";
+import { Card } from "../../components/ui";
+import { api } from "../../services/api";
 
 const AdminHistoryPage = () => {
   const [quizzes, setQuizzes] = useState<any[]>([]);
@@ -15,27 +15,34 @@ const AdminHistoryPage = () => {
         setQuizzes(q || []);
         setResults(r || []);
       } catch (e) {
-        setError('Failed to load history');
+        setError("Failed to load history");
       }
     })();
   }, []);
 
-  const quizIdToResults = quizzes.reduce((acc: Record<string, any[]>, q: any) => {
-    acc[q._id || q.id] = results.filter(r => r.quizId === (q._id || q.id));
-    return acc;
-  }, {});
+  const quizIdToResults = quizzes.reduce(
+    (acc: Record<string, any[]>, q: any) => {
+      acc[q._id || q.id] = results.filter((r) => r.quizId === (q._id || q.id));
+      return acc;
+    },
+    {}
+  );
 
   return (
     <AnimatedWrapper className="max-w-5xl mx-auto space-y-6">
       <h2 className="text-3xl font-bold">Quiz History</h2>
-      {error && <div className="p-3 bg-red-500/20 text-red-400 rounded">{error}</div>}
-      {quizzes.map(q => {
+      {error && (
+        <div className="p-3 bg-red-500/20 text-red-400 rounded">{error}</div>
+      )}
+      {quizzes.map((q) => {
         const list = quizIdToResults[q._id || q.id] || [];
         return (
           <Card key={q._id || q.id}>
             <div className="flex items-center justify-between">
               <h3 className="text-xl font-semibold">{q.title}</h3>
-              <span className="text-sm text-slate-400">{q.questionPool?.length || 0} questions</span>
+              <span className="text-sm text-slate-400">
+                {q.questionPool?.length || 0} questions
+              </span>
             </div>
             <div className="mt-4">
               {list.length === 0 ? (
@@ -55,9 +62,16 @@ const AdminHistoryPage = () => {
                       {list.map((r, idx) => (
                         <tr key={idx} className="border-t border-slate-700">
                           <td className="py-2 pr-4">{r.userId}</td>
-                          <td className="py-2 pr-4 font-semibold">{r.score}%</td>
-                          <td className="py-2 pr-4">{Math.floor((r.timeTaken||0)/60)}m {(r.timeTaken||0)%60}s</td>
-                          <td className="py-2 pr-4">{new Date(r.submittedAt).toLocaleString()}</td>
+                          <td className="py-2 pr-4 font-semibold">
+                            {r.score}%
+                          </td>
+                          <td className="py-2 pr-4">
+                            {Math.floor((r.timeTaken || 0) / 60)}m{" "}
+                            {(r.timeTaken || 0) % 60}s
+                          </td>
+                          <td className="py-2 pr-4">
+                            {new Date(r.submittedAt).toLocaleString()}
+                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -73,5 +87,3 @@ const AdminHistoryPage = () => {
 };
 
 export default AdminHistoryPage;
-
-

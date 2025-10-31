@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAppContext } from "../../context/AppContext";
 import { useToast } from "../../components/ui";
@@ -16,7 +16,6 @@ import {
   TrophyIcon,
   SparklesIcon,
 } from "../../components/Icons";
-import axios from "axios";
 import { api } from "../../services/api";
 
 const QuizResults = () => {
@@ -151,6 +150,8 @@ const QuizResults = () => {
       );
 
       const newQuiz = {
+        _id: `quiz-db-${Date.now()}`,
+        newAssignment: {},
         id: `quiz-${Date.now()}`,
         title,
         questionPool: questions.map((q, i) => ({
@@ -164,7 +165,7 @@ const QuizResults = () => {
         createdBy: "AI" as const,
       };
 
-      const { newAssignment } = addQuiz(newQuiz, {
+      const { newAssignment } = await addQuiz(newQuiz, {
         studentIds: [currentUser!._id],
         deadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
         numQuestionsToAssign: questions.length,
@@ -297,14 +298,14 @@ const QuizResults = () => {
                           }`}
                         >
                           {optIndex === correctOption && (
-                            <CheckCircleIcon className="w-6 h-6 text-green-500 flex-shrink-0 mt-0.5" />
+                            <CheckCircleIcon className="w-6 h-6 text-green-500 shrink-0 mt-0.5" />
                           )}
                           {optIndex === selectedOption && !isCorrect && (
-                            <XCircleIcon className="w-6 h-6 text-red-500 flex-shrink-0 mt-0.5" />
+                            <XCircleIcon className="w-6 h-6 text-red-500 shrink-0 mt-0.5" />
                           )}
                           {optIndex !== correctOption &&
                             optIndex !== selectedOption && (
-                              <div className="w-6 h-6 flex-shrink-0" />
+                              <div className="w-6 h-6 shrink-0" />
                             )}
                           <span
                             className={`${
