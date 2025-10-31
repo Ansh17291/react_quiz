@@ -1,9 +1,8 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAppContext } from "../../context/AppContext";
 import type { Question, StudentAnswer, QuizResult } from "../../types";
 import { Button, Card, Spinner, Modal } from "../../components/ui";
-import axios from "axios";
 import { api } from "../../services/api";
 
 const QuizTaker = () => {

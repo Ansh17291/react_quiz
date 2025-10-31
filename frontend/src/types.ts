@@ -78,6 +78,7 @@ export interface DiscussionReply {
 
 export interface DiscussionPost {
   id: string;
+  _id: string;
   title: string;
   content: string;
   authorId: string;

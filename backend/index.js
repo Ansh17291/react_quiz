@@ -8,6 +8,7 @@ const fs = require("fs");
 const multer = require("multer");
 const XLSX = require("xlsx");
 const mammoth = require("mammoth");
+const JSZip = require("jszip");
 
 const aes256 = require("aes256");
 const { encryptString, decryptString } = require("./utils/crypto");
@@ -448,8 +449,19 @@ app.post(
         );
         extractedText = parts.join("\n");
       } else if (ext === ".pptx") {
-        // Not parsed; keep for resources and future parsing
-        extractedText = "";
+        const buffer = fs.readFileSync(req.file.path);
+        const zip = await JSZip.loadAsync(buffer);
+        const slideFiles = Object.keys(zip.files).filter((name) =>
+          name.startsWith("ppt/slides/slide") && name.endsWith(".xml")
+        );
+        const parts = await Promise.all(
+          slideFiles.map(async (name) => {
+            const xml = await zip.files[name].async("string");
+            const matches = [...xml.matchAll(/<a:t[^>]*>([\s\S]*?)<\/a:t>/g)];
+            return matches.map((m) => m[1]).join(" ");
+          })
+        );
+        extractedText = parts.join("\n\n");
       } else {
         return res.status(415).json({ error: "Unsupported file type" });
       }

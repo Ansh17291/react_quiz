@@ -28,7 +28,7 @@ interface AppContextType {
   addQuiz: (
     quiz: Quiz,
     assignment: Omit<QuizAssignment, "id" | "quizId">
-  ) => { newQuiz: Quiz; newAssignment: QuizAssignment };
+  ) => Promise<{ newQuiz: Quiz; newAssignment: QuizAssignment }>;
   addResult: (result: QuizResult) => void;
   addResource: (resource: Resource) => void;
   removeUser: (userId: string) => void;
@@ -74,7 +74,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
   const [resources, setResources] = useState<Resource[]>([]);
   const [discussionPosts, setDiscussionPosts] = useState<DiscussionPost[]>([]);
   const [isDataLoaded, setIsDataLoaded] = useState(false);
-  const [backendAvailable, setBackendAvailable] = useState(false);
+  const [, setBackendAvailable] = useState(false);
 
   // Calculate total points for a user from results
   const calculateUserPoints = (
@@ -276,6 +276,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
       authorId: replyData.authorId,
       content: replyData.content,
       createdAt: new Date().toISOString(),
+      id: postId,
     };
     console.log(postId);
 

@@ -135,7 +135,7 @@ const LoginPage = () => {
         </div>
         <Button
           type="submit"
-          className="w-full py-3 text-lg font-bold tracking-wide bg-gradient-to-r from-primary-500 to-indigo-600 hover:from-indigo-500 hover:to-primary-500 transition-all duration-300"
+          className="w-full py-3 text-lg font-bold tracking-wide bg-linear-to-r from-primary-500 to-indigo-600 hover:from-indigo-500 hover:to-primary-500 transition-all duration-300"
         >
           {studentMode === "login" ? "Log In" : "Sign Up"}
         </Button>
@@ -180,7 +180,7 @@ const LoginPage = () => {
       </div>
       <Button
         type="submit"
-        className="w-full py-3 text-lg font-bold bg-gradient-to-r from-primary-500 to-indigo-600 hover:from-indigo-500 hover:to-primary-500 transition-all duration-300"
+        className="w-full py-3 text-lg font-bold bg-linear-to-r from-primary-500 to-indigo-600 hover:from-indigo-500 hover:to-primary-500 transition-all duration-300"
       >
         Log In
       </Button>
@@ -191,10 +191,10 @@ const LoginPage = () => {
   );
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white p-4">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-linear-to-br from-slate-900 via-slate-800 to-slate-900 text-white p-4">
       <Link
         to="/"
-        className="text-4xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-primary-400 to-indigo-400 mb-8 hover:scale-105 transition-transform"
+        className="text-4xl font-extrabold bg-clip-text text-transparent bg-linear-to-r from-primary-400 to-indigo-400 mb-8 hover:scale-105 transition-transform"
       >
         IntelliQuiz AI
       </Link>
@@ -210,7 +210,7 @@ const LoginPage = () => {
               }}
               className={`flex-1 py-4 font-bold transition-all duration-300 ${
                 activeRole === role
-                  ? "bg-gradient-to-r from-primary-600 to-indigo-600 text-white"
+                  ? "bg-linear-to-r from-primary-600 to-indigo-600 text-white"
                   : "bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-white"
               }`}
             >

@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useAppContext } from "../../context/AppContext";
 import { useToast } from "../../components/ui";
-import type { Quiz, Question, Resource } from "../../types";
+import type { Quiz } from "../../types";
 import {
   generateQuizFromText,
   generateSimilarQuestions,
@@ -18,12 +18,11 @@ import {
   PlusCircleIcon,
   SparklesIcon,
 } from "../../components/Icons";
-import axios from "axios";
 import { api } from "../../services/api";
 import { useNavigate } from "react-router-dom";
 
 const AdminDashboard = () => {
-  const { addQuiz, addResource, users, removeUser } = useAppContext();
+  const { addQuiz, addResource, removeUser } = useAppContext();
   const navigate = useNavigate();
   const { addToast } = useToast();
   const [activeTab, setActiveTab] = useState("Create Quiz");
@@ -436,7 +435,7 @@ const AdminDashboard = () => {
                         className="mt-1 block w-28 rounded-md border-slate-600 shadow-sm bg-slate-700 focus:border-primary-300 focus:ring focus:ring-primary-200 focus:ring-opacity-50"
                       />
                     </label>
-                    <div className="flex-grow"></div>
+                    <div className="grow"></div>
                     <label className="cursor-pointer">
                       <Button
                         as="span"
@@ -615,7 +614,7 @@ const AdminDashboard = () => {
                         </>
                       )}
                     </Button>
-                    <div className="flex-grow"></div>
+                    <div className="grow"></div>
                     <Button
                       onClick={() => {
                         setIsLiveQuiz(false);
@@ -647,7 +646,6 @@ const AdminDashboard = () => {
                 <div className="flex items-center gap-4">
                   <label className="cursor-pointer">
                     <Button
-                      as="span"
                       variant="secondary"
                       disabled={uploadingResource}
                       onClick={() => resourceInputRef.current?.click()}
@@ -691,7 +689,10 @@ const AdminDashboard = () => {
                             variant="secondary"
                             onClick={async () => {
                               if (!newPassword.trim()) return;
-                              await api.updateUserPassword(student._id, newPassword);
+                              await api.updateUserPassword(
+                                student._id,
+                                newPassword
+                              );
                               setEditingUserId(null);
                               setNewPassword("");
                               addToast("Password updated", "success");
@@ -764,7 +765,10 @@ const AdminDashboard = () => {
                             variant="secondary"
                             onClick={async () => {
                               if (!newPassword.trim()) return;
-                              await api.updateUserPassword(teacher._id, newPassword);
+                              await api.updateUserPassword(
+                                teacher._id,
+                                newPassword
+                              );
                               setEditingUserId(null);
                               setNewPassword("");
                               addToast("Password updated", "success");

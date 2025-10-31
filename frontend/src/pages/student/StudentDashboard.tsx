@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAppContext } from "../../context/AppContext";
 import { StatCard } from "../../features/dashboard/StatCard";
@@ -21,7 +21,7 @@ const StudentDashboard = () => {
   const { currentUser } = useAppContext();
   const navigate = useNavigate();
 
-  const [assignments, setAssignments] = React.useState<any[]>([]);
+  const [, setAssignments] = React.useState<any[]>([]);
   const [studentAssignments, setStudentAssignments] = React.useState<any[]>([]);
   const [users, setUsers] = React.useState<any[]>([]);
   const [results, setResults] = React.useState<any[]>([]);
