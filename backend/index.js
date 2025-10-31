@@ -173,7 +173,7 @@ app.post("/api/discussions", async (req, res) => {
 
 app.post("/api/discussions/reply", async (req, res) => {
   try {
-    const { postId, authorId, content } = req.body.optimistic;
+    const { authorId, content } = req.body.optimistic;
 
     // Create the reply
     const createReply = await DiscussionReply.create({
@@ -182,7 +182,7 @@ app.post("/api/discussions/reply", async (req, res) => {
     });
 
     // Find the main post and push the reply ID
-    const mainPost = await DiscussionPost.findById(postId);
+    const mainPost = await DiscussionPost.findById(req.body.postId);
     if (!mainPost) {
       return res.status(404).json({ error: "Discussion post not found" });
     }
