@@ -75,8 +75,8 @@ const QuizResults = () => {
           return;
         }
 
-        console.log("Quiz data:", quizData);
-        console.log("Result data:", resultData);
+        // console.log("Quiz data:", quizData);
+        // console.log("Result data:", resultData);
 
         setQuiz(quizData);
         setResult(resultData);
@@ -271,13 +271,13 @@ const QuizResults = () => {
               const selectedOption = studentAnswer.selectedOptionIndex;
               const correctOption = question.correctAnswerIndex;
 
-              console.log("Rendering question:", {
-                questionId: question.id,
-                text: question.questionText,
-                selectedOption,
-                correctOption,
-                isCorrect,
-              });
+              // console.log("Rendering question:", {
+              //   questionId: question.id,
+              //   text: question.questionText,
+              //   selectedOption,
+              //   correctOption,
+              //   isCorrect,
+              // });
 
               return (
                 <div key={question.id} className="p-4 rounded-lg bg-slate-800">

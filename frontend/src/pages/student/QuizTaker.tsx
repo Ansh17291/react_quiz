@@ -60,8 +60,8 @@ const QuizTaker = () => {
           return;
         }
 
-        console.log("Assignment data:", assignmentData);
-        console.log("Quiz data:", quizData);
+        // console.log("Assignment data:", assignmentData);
+        // console.log("Quiz data:", quizData);
         setAssignment(assignmentData);
         setQuiz(quizData);
       } catch (err) {
@@ -103,13 +103,13 @@ const QuizTaker = () => {
         (opt) => opt === originalCorrectAnswerText
       );
 
-      console.log("Question:", {
-        id: questionId,
-        text: q.questionText,
-        originalCorrectIndex: q.correctAnswerIndex,
-        newCorrectIndex: newCorrectAnswerIndex,
-        originalCorrectAnswer: originalCorrectAnswerText,
-      });
+      // console.log("Question:", {
+      //   id: questionId,
+      //   text: q.questionText,
+      //   originalCorrectIndex: q.correctAnswerIndex,
+      //   newCorrectIndex: newCorrectAnswerIndex,
+      //   originalCorrectAnswer: originalCorrectAnswerText,
+      // });
 
       return {
         ...q,
@@ -119,7 +119,7 @@ const QuizTaker = () => {
       };
     });
 
-    console.log("Ready questions:", readyQuestions);
+    // console.log("Ready questions:", readyQuestions);
     // Randomize final question order for display
     const randomizedQuestions = shuffleArray(readyQuestions);
     setActiveQuestions(randomizedQuestions);
@@ -163,21 +163,21 @@ const QuizTaker = () => {
           ? selectedOptionIndex === original.correctAnswerIndex
           : false;
 
-      console.log(selectedOptionIndex);
-      console.log(q.correctAnswerIndex);
+      // console.log(selectedOptionIndex);
+      // console.log(q.correctAnswerIndex);
 
-      console.log("Question submission:", {
-        questionId: q.id,
-        questionText: q.questionText,
-        selectedIndex: selectedOptionIndex,
-        correctIndex: q.correctAnswerIndex,
-        selectedAnswer:
-          selectedOptionIndex >= 0
-            ? q.options[selectedOptionIndex]
-            : "No answer",
-        correctAnswer: q.options[q.correctAnswerIndex],
-        isCorrect,
-      });
+      // console.log("Question submission:", {
+      //   questionId: q.id,
+      //   questionText: q.questionText,
+      //   selectedIndex: selectedOptionIndex,
+      //   correctIndex: q.correctAnswerIndex,
+      //   selectedAnswer:
+      //     selectedOptionIndex >= 0
+      //       ? q.options[selectedOptionIndex]
+      //       : "No answer",
+      //   correctAnswer: q.options[q.correctAnswerIndex],
+      //   isCorrect,
+      // });
 
       return {
         questionId: q.id,

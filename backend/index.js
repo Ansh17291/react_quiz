@@ -229,7 +229,7 @@ app.get("/api/quizzes", async (req, res) => {
 });
 
 app.post("/api/quizzes/:quizID/submit", async (req, res) => {
-  console.log(req.body.result);
+  // console.log(req.body.result);
 
   const results = await QuizResult.create({
     quizId: req.body.result.quizId,
@@ -318,10 +318,10 @@ function signToken(user) {
 app.post("/api/user/student-login", async (req, res) => {
   const { name, password } = req.body;
 
-  console.log(name);
+  // console.log(name);
   if (!name || !password)
     return res.status(400).json({ error: "name and password required" });
-  const user = await User.findOne({ name });
+  // const user = await User.findOne({ name });
   if (!user) return res.status(401).json({ error: "Invalid credentials" });
   const ok = await bcrypt.compare(password, user.password || "");
   if (!ok) return res.status(401).json({ error: "Invalid credentials" });
@@ -332,7 +332,7 @@ app.post("/api/user/student-login", async (req, res) => {
 app.post("/api/user/teacher-login", async (req, res) => {
   const { name, password } = req.body;
 
-  console.log(name, password);
+  // console.log(name, password);
 
   if (!name || !password)
     return res.status(400).json({ error: "name and password required" });
@@ -479,14 +479,14 @@ app.post(
 
 app.post("/api/delete", async (req, res) => {
   const user = await User.findByIdAndDelete(req.body.userId);
-  console.log(user);
+  // console.log(user);
   const users = await User.find({}).lean();
   res.status(201).json(users);
 });
 
 app.post("/api/create-quiz", async (req, res) => {
   try {
-    console.log(req.body.assignment);
+    // console.log(req.body.assignment);
 
     const questionIds = await Promise.all(
       req.body.pool.map(async (individual) => {
