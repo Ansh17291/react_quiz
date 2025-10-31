@@ -15,7 +15,6 @@ import {
   ChartBarIcon,
   BookOpenIcon,
 } from "../../components/Icons";
-import axios from "axios";
 import { api } from "../../services/api";
 
 const StudentDashboard = () => {
@@ -63,12 +62,13 @@ const StudentDashboard = () => {
         setError(null);
 
         // Fetch all data in parallel via shared API
-        const [usersRes, assignmentsRes, quizzesRes, resultsRes] = await Promise.all([
-          api.getUsers(),
-          api.getAssignments(),
-          api.getQuizzes(),
-          api.getResults(),
-        ]);
+        const [usersRes, assignmentsRes, quizzesRes, resultsRes] =
+          await Promise.all([
+            api.getUsers(),
+            api.getAssignments(),
+            api.getQuizzes(),
+            api.getResults(),
+          ]);
 
         // Update state with the fetched data
         setUsers(usersRes || []);

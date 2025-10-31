@@ -1,4 +1,4 @@
-import type { User, Quiz, QuizResult, Resource, DiscussionPost } from '../types';
+import type { Quiz, QuizResult, Resource, DiscussionPost } from '../types';
 
 export const BASE = import.meta.env.VITE_API_URL || 'http://localhost:8080';
 
@@ -33,6 +33,9 @@ export const api = {
     submitQuizResult: (quizId: string, payload: Partial<QuizResult>) => request(`/api/quizzes/${quizId}/submit`, { method: 'POST', body: JSON.stringify(payload) }),
     getResults: () => request('/api/results').catch(() => []),
     getAssignments: () => request('/api/assignment').catch(() => []),
+    createAssignment: (payload: { quizId: string; studentIds: string[]; deadline?: string; timeLimit?: number; numQuestionsToAssign?: number; isLive?: boolean; }) => request('/api/assignments', { method: 'POST', body: JSON.stringify(payload) }),
+    getAssignmentByQuiz: (quizId: string) => request(`/api/assignments/by-quiz/${quizId}`),
+    updateAssignmentByQuiz: (quizId: string, payload: { studentIds: string[]; deadline?: string; timeLimit?: number; isLive?: boolean; }) => request(`/api/assignments/by-quiz/${quizId}`, { method: 'PUT', body: JSON.stringify(payload) }),
     getResources: () => request('/api/resources'),
     addResource: (r: Partial<Resource>) => request('/api/resources', { method: 'POST', body: JSON.stringify(r) }),
     getPosts: () => request('/api/posts'),
@@ -40,6 +43,7 @@ export const api = {
     // Backend creates posts at /api/discussions
     addPost: (p: Partial<DiscussionPost>) => request('/api/discussions', { method: 'POST', body: JSON.stringify(p) }),
     addReply: (postId: string, reply: any) => request(`/api/posts/${postId}/replies`, { method: 'POST', body: JSON.stringify(reply) }),
+    updateUserPassword: (userId: string, password: string) => request(`/api/users/${userId}/password`, { method: 'PUT', body: JSON.stringify({ password }) }),
 };
 
 export default api;

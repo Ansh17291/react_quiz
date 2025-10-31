@@ -8,7 +8,6 @@ import {
 } from "../../components/shared/AnimatedComponents";
 import { Button, Card, Modal } from "../../components/ui";
 import { PlusCircleIcon } from "../../components/Icons";
-import axios from "axios";
 import { api } from "../../services/api";
 
 const DiscussionListPage = () => {

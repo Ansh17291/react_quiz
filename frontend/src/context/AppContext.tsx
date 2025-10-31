@@ -12,7 +12,6 @@ import {
 import { usePersistentState } from "../hooks/usePersistentState";
 import { startChat } from "../services/geminiService";
 import { api, BASE } from "../services/api";
-import type { Role } from "../types";
 import axios from "axios";
 
 // --- APP CONTEXT ---
@@ -283,8 +282,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
     const data = await axios.post(
       "http://localhost:8080/api/discussions/reply",
       {
-        optimistic,
-        postId,
+        optimistic: {
+          postId,
+          ...optimistic,
+        },
       }
     );
 

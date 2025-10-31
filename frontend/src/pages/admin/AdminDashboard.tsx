@@ -20,9 +20,11 @@ import {
 } from "../../components/Icons";
 import axios from "axios";
 import { api } from "../../services/api";
+import { useNavigate } from "react-router-dom";
 
 const AdminDashboard = () => {
   const { addQuiz, addResource, users, removeUser } = useAppContext();
+  const navigate = useNavigate();
   const { addToast } = useToast();
   const [activeTab, setActiveTab] = useState("Create Quiz");
 
@@ -53,6 +55,9 @@ const AdminDashboard = () => {
     new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split("T")[0]
   );
   const [isLiveQuiz, setIsLiveQuiz] = useState(false);
+  // Edit password state
+  const [editingUserId, setEditingUserId] = useState<string | null>(null);
+  const [newPassword, setNewPassword] = useState<string>("");
 
   // Teacher modal states
   const [isAddTeacherModalOpen, setIsAddTeacherModalOpen] = useState(false);
@@ -365,11 +370,8 @@ const AdminDashboard = () => {
 
       const newTeacher = await response.json();
       teachers.current = [...teachers.current, newTeacher];
-      
-      addToast(
-        `Teacher "${newTeacherName}" added successfully!`,
-        "success"
-      );
+
+      addToast(`Teacher "${newTeacherName}" added successfully!`, "success");
       addToast(
         `Credentials - Username: ${newTeacherName}, Password: ${newTeacherPassword}`,
         "info"
@@ -389,7 +391,12 @@ const AdminDashboard = () => {
 
   return (
     <AnimatedWrapper className="space-y-8">
-      <h2 className="text-3xl font-bold">Admin Dashboard</h2>
+      <div className="flex items-center justify-between">
+        <h2 className="text-3xl font-bold">Admin Dashboard</h2>
+        <Button onClick={() => navigate("/admin/quizzes")} variant="secondary">
+          View All Quizzes
+        </Button>
+      </div>
       <div>
         <Tabs
           tabs={["Create Quiz", "Manage Students", "Manage Teachers"]}
@@ -449,7 +456,6 @@ const AdminDashboard = () => {
                     />
                     <label className="cursor-pointer">
                       <Button
-                        as="span"
                         variant="secondary"
                         disabled={uploadingGen}
                         onClick={() => genInputRef.current?.click()}
@@ -504,9 +510,12 @@ const AdminDashboard = () => {
                       <span className="text-gray-300">Questions to Assign</span>
                       <input
                         type="number"
+                        min={0}
                         value={numQuestionsToAssign}
                         onChange={(e) =>
-                          setNumQuestionsToAssign(parseInt(e.target.value))
+                          setNumQuestionsToAssign(
+                            Math.max(0, parseInt(e.target.value))
+                          )
                         }
                         className="mt-1 block w-full p-2 rounded-md bg-slate-700 border-slate-600"
                       />
@@ -668,12 +677,55 @@ const AdminDashboard = () => {
                     className="flex justify-between items-center p-3 bg-slate-700 rounded-lg"
                   >
                     <span>{student.name}</span>
-                    <Button
-                      variant="danger"
-                      onClick={() => handleRevokeStudent(student._id)}
-                    >
-                      Revoke Access
-                    </Button>
+                    <div className="flex items-center gap-2">
+                      {editingUserId === student._id ? (
+                        <>
+                          <input
+                            type="password"
+                            placeholder="New password"
+                            className="p-2 rounded bg-slate-800 border border-slate-600"
+                            value={newPassword}
+                            onChange={(e) => setNewPassword(e.target.value)}
+                          />
+                          <Button
+                            variant="secondary"
+                            onClick={async () => {
+                              if (!newPassword.trim()) return;
+                              await api.updateUserPassword(student._id, newPassword);
+                              setEditingUserId(null);
+                              setNewPassword("");
+                              addToast("Password updated", "success");
+                            }}
+                          >
+                            Save
+                          </Button>
+                          <Button
+                            variant="secondary"
+                            onClick={() => {
+                              setEditingUserId(null);
+                              setNewPassword("");
+                            }}
+                          >
+                            Cancel
+                          </Button>
+                        </>
+                      ) : (
+                        <>
+                          <Button
+                            variant="secondary"
+                            onClick={() => setEditingUserId(student._id)}
+                          >
+                            Edit Password
+                          </Button>
+                          <Button
+                            variant="danger"
+                            onClick={() => handleRevokeStudent(student._id)}
+                          >
+                            Revoke Access
+                          </Button>
+                        </>
+                      )}
+                    </div>
                   </div>
                 ))}
               </StaggeredList>
@@ -698,12 +750,55 @@ const AdminDashboard = () => {
                     className="flex justify-between items-center p-3 bg-slate-700 rounded-lg"
                   >
                     <span>{teacher.name}</span>
-                    <Button
-                      variant="danger"
-                      onClick={() => handleRevokeTeacher(teacher._id)}
-                    >
-                      Revoke Access
-                    </Button>
+                    <div className="flex items-center gap-2">
+                      {editingUserId === teacher._id ? (
+                        <>
+                          <input
+                            type="password"
+                            placeholder="New password"
+                            className="p-2 rounded bg-slate-800 border border-slate-600"
+                            value={newPassword}
+                            onChange={(e) => setNewPassword(e.target.value)}
+                          />
+                          <Button
+                            variant="secondary"
+                            onClick={async () => {
+                              if (!newPassword.trim()) return;
+                              await api.updateUserPassword(teacher._id, newPassword);
+                              setEditingUserId(null);
+                              setNewPassword("");
+                              addToast("Password updated", "success");
+                            }}
+                          >
+                            Save
+                          </Button>
+                          <Button
+                            variant="secondary"
+                            onClick={() => {
+                              setEditingUserId(null);
+                              setNewPassword("");
+                            }}
+                          >
+                            Cancel
+                          </Button>
+                        </>
+                      ) : (
+                        <>
+                          <Button
+                            variant="secondary"
+                            onClick={() => setEditingUserId(teacher._id)}
+                          >
+                            Edit Password
+                          </Button>
+                          <Button
+                            variant="danger"
+                            onClick={() => handleRevokeTeacher(teacher._id)}
+                          >
+                            Revoke Access
+                          </Button>
+                        </>
+                      )}
+                    </div>
                   </div>
                 ))}
               </StaggeredList>
@@ -803,9 +898,7 @@ const AdminDashboard = () => {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-2">
-              Password
-            </label>
+            <label className="block text-sm font-medium mb-2">Password</label>
             <input
               type="password"
               value={newTeacherPassword}
@@ -814,11 +907,12 @@ const AdminDashboard = () => {
               className="w-full p-2 border rounded-md bg-slate-700 border-slate-600 focus:ring-primary-500 focus:border-primary-500"
             />
             <p className="text-xs text-slate-400 mt-1">
-              Make sure to save these credentials - they will be shown once after creation
+              Make sure to save these credentials - they will be shown once
+              after creation
             </p>
           </div>
-          <Button 
-            onClick={handleAddTeacher} 
+          <Button
+            onClick={handleAddTeacher}
             className="w-full"
             disabled={isAddingTeacher}
           >
