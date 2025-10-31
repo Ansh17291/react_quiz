@@ -11,6 +11,7 @@ import {
   StaggeredList,
 } from "../../components/shared/AnimatedComponents";
 import { Button, Card, Modal, Spinner, Tabs } from "../../components/ui";
+import { BASE } from "../../services/api";
 import {
   UploadIcon,
   XCircleIcon,
@@ -29,6 +30,11 @@ const AdminDashboard = () => {
 
   const [isCreating, setIsCreating] = useState(false);
   const [quizText, setQuizText] = useState("");
+  const [uploadingGen, setUploadingGen] = useState(false);
+  const [uploadingResource, setUploadingResource] = useState(false);
+  const txtInputRef = useRef<HTMLInputElement | null>(null);
+  const genInputRef = useRef<HTMLInputElement | null>(null);
+  const resourceInputRef = useRef<HTMLInputElement | null>(null);
   const [numQuestions, setNumQuestions] = useState(10);
   const [error, setError] = useState("");
 
@@ -140,6 +146,78 @@ const AdminDashboard = () => {
         );
       };
       reader.readAsText(file);
+    }
+  };
+
+  const handleUploadForGeneration = async (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingGen(true);
+    try {
+      const form = new FormData();
+      form.append("file", file);
+      const resp = await fetch(`${BASE}/api/quizzes/generate-from-upload`, {
+        method: "POST",
+        body: form,
+      });
+      if (!resp.ok) throw new Error(`Upload failed: ${resp.status}`);
+      const data = await resp.json();
+      if (data.text) {
+        setQuizText(data.text);
+        addToast(
+          `Extracted text from ${file.name}. You can now Generate & Assign.`,
+          "success"
+        );
+      } else {
+        addToast(
+          `Uploaded ${file.name}. No text extracted (file stored).`,
+          "info"
+        );
+      }
+      // Also add to resources list so it appears for students
+      if (data.fileUrl) {
+        addResource({
+          _id: `res-${Date.now()}`,
+          id: `res-${Date.now()}`,
+          title: data.originalName || file.name,
+          content: data.fileUrl,
+          type: 'file',
+        } as any);
+      }
+    } catch (err) {
+      console.error(err);
+      addToast("Failed to process uploaded file for generation", "error");
+    } finally {
+      setUploadingGen(false);
+    }
+  };
+
+  const handleUploadResourceFile = async (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingResource(true);
+    try {
+      const form = new FormData();
+      form.append("file", file);
+      form.append("title", file.name);
+      const resp = await fetch(`${BASE}/api/resources/upload`, {
+        method: "POST",
+        body: form,
+      });
+      if (!resp.ok) throw new Error(`Upload failed: ${resp.status}`);
+      const resource = await resp.json();
+      // Normalize the resource id fields for the context
+      addResource({ ...(resource as any), _id: resource._id || resource.id, id: resource._id || resource.id } as any);
+      addToast("Resource uploaded and added to Resources", "success");
+    } catch (err) {
+      console.error(err);
+      addToast("Failed to upload resource", "error");
+    } finally {
+      setUploadingResource(false);
     }
   };
 
@@ -272,17 +350,40 @@ const AdminDashboard = () => {
                       />
                     </label>
                     <div className="flex-grow"></div>
-                    <label htmlFor="file-upload" className="cursor-pointer">
-                      <Button as="span" variant="secondary">
+                    <label className="cursor-pointer">
+                      <Button
+                        as="span"
+                        variant="secondary"
+                        onClick={() => txtInputRef.current?.click()}
+                      >
                         <UploadIcon className="w-5 h-5" /> Upload .txt
                       </Button>
                     </label>
                     <input
-                      _id="file-upload"
+                      id="file-upload"
                       type="file"
                       accept=".txt"
                       className="hidden"
                       onChange={handleFileChange}
+                      ref={txtInputRef}
+                    />
+                    <label className="cursor-pointer">
+                      <Button
+                        as="span"
+                        variant="secondary"
+                        disabled={uploadingGen}
+                        onClick={() => genInputRef.current?.click()}
+                      >
+                        <UploadIcon className="w-5 h-5" /> Upload docx/xlsx/pptx
+                      </Button>
+                    </label>
+                    <input
+                      id="gen-upload"
+                      type="file"
+                      accept=".docx,.xlsx,.pptx,.txt"
+                      className="hidden"
+                      onChange={handleUploadForGeneration}
+                      ref={genInputRef}
                     />
                     <Button onClick={handleGenerateQuiz} disabled={isCreating}>
                       {isCreating ? (
@@ -444,6 +545,35 @@ const AdminDashboard = () => {
                       Host as Live Quiz
                     </Button>
                   </div>
+                </div>
+              </Card>
+              <Card>
+                <h3 className="text-xl font-semibold mb-4">
+                  Upload Resource File
+                </h3>
+                <p className="text-slate-300 mb-2">
+                  Upload Word/Excel/PPT/Text files to Resources for students to
+                  download.
+                </p>
+                <div className="flex items-center gap-4">
+                  <label className="cursor-pointer">
+                    <Button
+                      as="span"
+                      variant="secondary"
+                      disabled={uploadingResource}
+                      onClick={() => resourceInputRef.current?.click()}
+                    >
+                      <UploadIcon className="w-5 h-5" /> Upload Resource
+                    </Button>
+                  </label>
+                  <input
+                    id="resource-upload"
+                    type="file"
+                    accept=".docx,.xlsx,.pptx,.txt,.pdf"
+                    className="hidden"
+                    onChange={handleUploadResourceFile}
+                    ref={resourceInputRef}
+                  />
                 </div>
               </Card>
             </div>

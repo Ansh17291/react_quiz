@@ -3,6 +3,11 @@ const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
 const morgan = require("morgan");
+const path = require("path");
+const fs = require("fs");
+const multer = require("multer");
+const XLSX = require("xlsx");
+const mammoth = require("mammoth");
 
 const app = express();
 const PORT = process.env.PORT || 8080;
@@ -11,6 +16,24 @@ const PORT = process.env.PORT || 8080;
 app.use(cors());
 app.use(express.json());
 app.use(morgan("dev"));
+// serve uploaded files statically
+const UPLOAD_DIR = path.join(__dirname, "uploads");
+if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR);
+app.use("/uploads", express.static(UPLOAD_DIR));
+
+// multer storage
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, UPLOAD_DIR);
+  },
+  filename: function (req, file, cb) {
+    const unique = Date.now() + "-" + Math.round(Math.random() * 1e9);
+    const ext = path.extname(file.originalname);
+    const base = path.basename(file.originalname, ext).replace(/[^a-z0-9-_]/gi, "_");
+    cb(null, `${base}-${unique}${ext}`);
+  },
+});
+const upload = multer({ storage });
 
 // connect to MongoDB
 const MONGODB_URI = process.env.MONGODB_URI;
@@ -166,6 +189,74 @@ app.post("/api/resources", async (req, res) => {
 app.get("/api/posts", async (req, res) => {
   const posts = await DiscussionPost.find().populate("replies").lean();
   res.json(posts);
+});
+
+// Quizzes - return with populated questions so clients see full question pool
+app.get("/api/quizzes", async (req, res) => {
+  try {
+    const quizzes = await Quiz.find().populate("questionPool").lean();
+    res.json(quizzes);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: "Failed to load quizzes" });
+  }
+});
+
+// Upload a resource file (admin)
+app.post("/api/resources/upload", upload.single("file"), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: "No file uploaded" });
+    const fileUrl = `/uploads/${req.file.filename}`;
+    const resource = await Resource.create({
+      title: req.body.title || req.file.originalname,
+      content: fileUrl,
+      type: "file",
+    });
+    res.status(201).json(resource);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: "Upload failed" });
+  }
+});
+
+// Download resource helper (if needed for non-static)
+app.get("/api/resources/download/:filename", async (req, res) => {
+  const filePath = path.join(UPLOAD_DIR, req.params.filename);
+  if (!fs.existsSync(filePath)) return res.status(404).end();
+  res.download(filePath);
+});
+
+// Upload for quiz generation - accepts txt, docx, xlsx, pptx (pptx stored only)
+app.post("/api/quizzes/generate-from-upload", upload.single("file"), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: "No file uploaded" });
+    const ext = path.extname(req.file.originalname).toLowerCase();
+    let extractedText = "";
+    if (ext === ".txt") {
+      extractedText = fs.readFileSync(req.file.path, "utf8");
+    } else if (ext === ".docx") {
+      const result = await mammoth.extractRawText({ path: req.file.path });
+      extractedText = result.value || "";
+    } else if (ext === ".xlsx") {
+      const wb = XLSX.readFile(req.file.path);
+      const sheets = wb.SheetNames;
+      const parts = sheets.map((name) => XLSX.utils.sheet_to_csv(wb.Sheets[name]));
+      extractedText = parts.join("\n");
+    } else if (ext === ".pptx") {
+      // Not parsed; keep for resources and future parsing
+      extractedText = "";
+    } else {
+      return res.status(415).json({ error: "Unsupported file type" });
+    }
+    res.json({
+      fileUrl: `/uploads/${req.file.filename}`,
+      originalName: req.file.originalname,
+      text: extractedText,
+    });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: "Failed to process upload" });
+  }
 });
 
 app.post("/api/delete", async (req, res) => {

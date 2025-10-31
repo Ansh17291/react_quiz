@@ -3,6 +3,7 @@ import { useAppContext } from '../../context/AppContext';
 import { generateNotes } from '../../services/geminiService';
 import { AnimatedWrapper } from '../../components/shared/AnimatedComponents';
 import { Button, Card, Spinner } from '../../components/ui';
+import { BASE } from '../../services/api';
 import { DocumentTextIcon, SparklesIcon } from '../../components/Icons';
 
 const ResourcesPage = () => {
@@ -64,10 +65,25 @@ const ResourcesPage = () => {
             <Card>
                 <h3 className="text-xl font-semibold mb-4">Uploaded Content</h3>
                 <ul className="space-y-2">
-                    {resources.filter(r => r.type === 'text').map(res => (
-                        <li key={res.id} className="p-3 bg-slate-700 rounded-lg">{res.title}</li>
-                    ))}
-                    {resources.filter(r => r.type === 'text').length === 0 && <p className="text-slate-400">No content has been uploaded by the admin yet.</p>}
+                    {resources.map((res: any) => {
+                        const isFile = res.type === 'file' && typeof res.content === 'string' && res.content.startsWith('/uploads/');
+                        const fileUrl = isFile ? `${BASE}${res.content}` : undefined;
+                        return (
+                            <li key={res._id || res.id} className="p-3 bg-slate-700 rounded-lg flex items-center justify-between gap-3">
+                                <div>
+                                    <p className="font-semibold">{res.title}</p>
+                                    {!isFile && <p className="text-sm text-slate-400 truncate">{String(res.content)}</p>}
+                                    {isFile && (
+                                        <a href={fileUrl} target="_blank" rel="noreferrer" className="text-primary-400 text-sm underline">View</a>
+                                    )}
+                                </div>
+                                {isFile && (
+                                    <a href={fileUrl} download className="px-3 py-1 rounded bg-slate-800 hover:bg-slate-700 text-sm">Download</a>
+                                )}
+                            </li>
+                        );
+                    })}
+                    {resources.length === 0 && <p className="text-slate-400">No resources yet.</p>}
                 </ul>
             </Card>
         </AnimatedWrapper>

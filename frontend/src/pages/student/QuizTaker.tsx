@@ -24,6 +24,9 @@ const QuizTaker = () => {
   const [startTime, setStartTime] = useState(0);
   const [activeQuestions, setActiveQuestions] = useState<Question[]>([]);
   const [isQuizStarted, setIsQuizStarted] = useState(false);
+  const [markedForReview, setMarkedForReview] = useState<
+    Record<string, boolean>
+  >({});
 
   const handleSubmitRef = useRef(handleSubmit);
   handleSubmitRef.current = handleSubmit;
@@ -41,7 +44,9 @@ const QuizTaker = () => {
           api.getQuizzes(),
         ]);
 
-        const assignmentData = (assignments || []).find((a: any) => (a._id || a.id) === assignmentId);
+        const assignmentData = (assignments || []).find(
+          (a: any) => (a._id || a.id) === assignmentId
+        );
         const quizData = (quizzesRes || []).find(
           (q: any) => q._id === assignmentData.quizId
         );
@@ -142,10 +147,15 @@ const QuizTaker = () => {
         (orig: any) => (orig._id || orig.id) === q.id
       );
       const selectedAnswerText =
-        selectedOptionIndexShuffled >= 0 ? q.options[selectedOptionIndexShuffled] : undefined;
-      const selectedOptionIndex = original && selectedAnswerText
-        ? original.options.findIndex((opt: string) => opt === selectedAnswerText)
-        : -1;
+        selectedOptionIndexShuffled >= 0
+          ? q.options[selectedOptionIndexShuffled]
+          : undefined;
+      const selectedOptionIndex =
+        original && selectedAnswerText
+          ? original.options.findIndex(
+              (opt: string) => opt === selectedAnswerText
+            )
+          : -1;
 
       const isCorrect =
         original && selectedOptionIndex >= 0
@@ -250,6 +260,13 @@ const QuizTaker = () => {
     setSelectedAnswers((prev) => ({ ...prev, [questionId]: optionIndex }));
   };
 
+  const toggleMarkForReview = (questionId: string) => {
+    setMarkedForReview((prev) => ({
+      ...prev,
+      [questionId]: !prev[questionId],
+    }));
+  };
+
   // Loading state
   if (isLoading) {
     return (
@@ -316,7 +333,7 @@ const QuizTaker = () => {
   const seconds = timeLeft % 60;
 
   return (
-    <Card className="max-w-4xl mx-auto">
+    <Card className="max-w-6xl mx-auto">
       <div className="flex justify-between items-center mb-4 pb-4 border-b border-slate-700">
         <h2 className="text-2xl font-bold">{quiz.title}</h2>
         <div className="text-xl font-semibold bg-red-900 text-red-200 px-3 py-1 rounded-md">
@@ -325,26 +342,72 @@ const QuizTaker = () => {
         </div>
       </div>
 
-      <div>
-        <h3 className="text-xl font-semibold mb-2">
-          Question {currentQuestionIndex + 1} of {activeQuestions.length}
-        </h3>
-        <p className="text-lg mb-6">{currentQuestion.questionText}</p>
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        <div className="lg:col-span-3">
+          <h3 className="text-xl font-semibold mb-2">
+            Question {currentQuestionIndex + 1} of {activeQuestions.length}
+          </h3>
+          <p className="text-lg mb-6">{currentQuestion.questionText}</p>
 
-        <div className="space-y-3">
-          {currentQuestion.options.map((option, index) => (
-            <button
-              key={index}
-              onClick={() => handleAnswerSelect(currentQuestion.id, index)}
-              className={`w-full text-left p-4 rounded-lg border-2 transition-colors ${
-                selectedAnswers[currentQuestion.id] === index
-                  ? "bg-primary-900 border-primary-500"
-                  : "bg-slate-700 hover:bg-slate-600 border-transparent"
-              }`}
-            >
-              {option}
-            </button>
-          ))}
+          <div className="space-y-3">
+            {currentQuestion.options.map((option, index) => (
+              <button
+                key={index}
+                onClick={() => handleAnswerSelect(currentQuestion.id, index)}
+                className={`w-full text-left p-4 rounded-lg border-2 transition-colors ${
+                  selectedAnswers[currentQuestion.id] === index
+                    ? "bg-primary-900 border-primary-500"
+                    : "bg-slate-700 hover:bg-slate-600 border-transparent"
+                }`}
+              >
+                {option}
+              </button>
+            ))}
+            <div className="mt-6">
+              <Button
+                variant="secondary"
+                onClick={() => toggleMarkForReview(currentQuestion.id)}
+              >
+                {markedForReview[currentQuestion.id]
+                  ? "Unmark Review"
+                  : "Mark for Review"}
+              </Button>
+            </div>
+          </div>
+          <div>
+            <h4 className="font-semibold mb-2">Question Navigator</h4>
+            <div className="grid grid-cols-5 gap-2">
+              {activeQuestions.map((q, idx) => {
+                const attempted = Number.isInteger(selectedAnswers[q.id]);
+                const isCurrent = idx === currentQuestionIndex;
+                const isMarked = !!markedForReview[q.id];
+                return (
+                  <button
+                    key={q.id}
+                    onClick={() => setCurrentQuestionIndex(idx)}
+                    className={`p-2 rounded text-sm font-semibold border ${
+                      isCurrent ? "border-white" : "border-transparent"
+                    } ${
+                      isMarked
+                        ? "bg-yellow-600 text-black"
+                        : attempted
+                        ? "bg-green-600 text-white"
+                        : "bg-slate-700 text-slate-200"
+                    }`}
+                    title={
+                      isMarked
+                        ? "Marked for review"
+                        : attempted
+                        ? "Attempted"
+                        : "Not attempted"
+                    }
+                  >
+                    {idx + 1}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
         </div>
       </div>
 

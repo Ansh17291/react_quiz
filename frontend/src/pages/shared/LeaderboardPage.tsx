@@ -223,7 +223,12 @@ const LeaderboardPage = () => {
                               >
                                 {rank <= 3 ? rankBadges[rank - 1] : rank}
                               </span>
-                              {user?.name || "Unknown Student"}
+                              <button
+                                className="underline text-primary-300 hover:text-primary-200"
+                                onClick={() => user?._id && navigate(`/student/${user._id}`)}
+                              >
+                                {user?.name || "Unknown Student"}
+                              </button>
                             </span>
                             <div className="flex items-center gap-4">
                               <div className="flex flex-col items-end">

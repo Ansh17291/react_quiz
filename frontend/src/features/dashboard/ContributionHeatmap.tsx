@@ -14,7 +14,11 @@ export const ContributionHeatmap = ({ results }: { results: QuizResult[] }) => {
     const contributions: Record<string, number> = useMemo(() => {
         const map: Record<string, number> = {};
         results.forEach(r => {
-            const dateStr = new Date(r.submittedAt).toISOString().split('T')[0];
+            const d = new Date(r.submittedAt as any);
+            if (isNaN(d.getTime())) return;
+            // Normalize to local day to avoid timezone off-by-ones
+            const local = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+            const dateStr = local.toISOString().split('T')[0];
             map[dateStr] = (map[dateStr] || 0) + 1;
         });
         return map;
