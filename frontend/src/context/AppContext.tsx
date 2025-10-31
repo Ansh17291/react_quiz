@@ -78,7 +78,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
   const [backendAvailable, setBackendAvailable] = useState(false);
 
   // Calculate total points for a user from results
-  const calculateUserPoints = (userId: string, allResults: QuizResult[]): number => {
+  const calculateUserPoints = (
+    userId: string,
+    allResults: QuizResult[]
+  ): number => {
     return (allResults || [])
       .filter((r) => r.userId === userId)
       .reduce((sum, r) => sum + (r.score || 0), 0);
@@ -92,7 +95,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
       if (!mounted) return;
       setBackendAvailable(!!healthy);
       try {
-        const [usersResp, quizzesResp, resourcesResp, postsResp, resultsResp, assignmentsResp] = await Promise.all([
+        const [
+          usersResp,
+          quizzesResp,
+          resourcesResp,
+          postsResp,
+          resultsResp,
+          assignmentsResp,
+        ] = await Promise.all([
           api.getUsers(),
           api.getQuizzes(),
           api.getResources(),
@@ -202,7 +212,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
   };
 
   const updateUserPoints = (userId: string, points: number) => {
-    setUsers((prev) => prev.map((u) => (u.id === userId || u._id === userId) ? { ...u, points } : u));
+    setUsers((prev) =>
+      prev.map((u) =>
+        u.id === userId || u._id === userId ? { ...u, points } : u
+      )
+    );
   };
 
   const addResource = (resource: Resource) => {
@@ -255,26 +269,35 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
       });
   };
 
-  const addReply = (
+  const addReply = async (
     postId: string,
     replyData: { authorId: string; content: string }
   ) => {
     const optimistic = {
-      id: `reply-${Date.now()}`,
-      _id: undefined as any,
       authorId: replyData.authorId,
       content: replyData.content,
       createdAt: new Date().toISOString(),
     };
+    console.log(postId);
+
+    const data = await axios.post(
+      "http://localhost:8080/api/discussions/reply",
+      {
+        optimistic,
+        postId,
+      }
+    );
+
+    console.log(data.data);
 
     // Optimistic UI update
-    setDiscussionPosts((prev) =>
-      prev.map((p) =>
-        p.id === postId || p._id === postId
-          ? { ...p, replies: [...p.replies, optimistic] }
-          : p
-      )
-    );
+    // setDiscussionPosts((prev) =>
+    //   prev.map((p) =>
+    //     p.id === postId || p._id === postId
+    //       ? { ...p, replies: [...p.replies, optimistic] }
+    //       : p
+    //   )
+    // );
 
     api
       .addReply(postId, replyData as any)

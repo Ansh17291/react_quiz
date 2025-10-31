@@ -144,7 +144,10 @@ const DiscussionListPage = () => {
                   key={postId}
                   className="p-4 bg-slate-800 rounded-lg flex justify-between items-center hover:bg-slate-700 transition-colors"
                 >
-                  <div className="cursor-pointer" onClick={() => navigate(`/discussions/${postId}`)}>
+                  <div
+                    className="cursor-pointer"
+                    onClick={() => navigate(`/discussions/${postId}`)}
+                  >
                     <h3 className="text-lg font-bold text-primary-400">
                       {post.title}
                     </h3>
@@ -155,7 +158,9 @@ const DiscussionListPage = () => {
                   </div>
                   <div className="flex items-center gap-4">
                     <div className="text-right">
-                      <p className="font-semibold">{post.replies?.length || 0}</p>
+                      <p className="font-semibold">
+                        {post.replies?.length || 0}
+                      </p>
                       <p className="text-sm text-slate-400">Replies</p>
                     </div>
                     <Button

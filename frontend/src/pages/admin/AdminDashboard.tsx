@@ -107,7 +107,7 @@ const AdminDashboard = () => {
         quizText,
         numQuestions
       );
-      const newQuiz: Quiz = {
+      const newQuiz: any = {
         title,
         questionPool: questions.map((q) => ({
           ...q,
@@ -133,7 +133,7 @@ const AdminDashboard = () => {
       reader.onload = (e) => {
         const text = e.target?.result as string;
         setQuizText(text);
-        const newResource: Resource = {
+        const newResource: any = {
           _id: `res-${Date.now()}`,
           title: file.name,
           content: text,
@@ -183,7 +183,7 @@ const AdminDashboard = () => {
           id: `res-${Date.now()}`,
           title: data.originalName || file.name,
           content: data.fileUrl,
-          type: 'file',
+          type: "file",
         } as any);
       }
     } catch (err) {
@@ -211,7 +211,11 @@ const AdminDashboard = () => {
       if (!resp.ok) throw new Error(`Upload failed: ${resp.status}`);
       const resource = await resp.json();
       // Normalize the resource id fields for the context
-      addResource({ ...(resource as any), _id: resource._id || resource.id, id: resource._id || resource.id } as any);
+      addResource({
+        ...(resource as any),
+        _id: resource._id || resource.id,
+        id: resource._id || resource.id,
+      } as any);
       addToast("Resource uploaded and added to Resources", "success");
     } catch (err) {
       console.error(err);
@@ -282,7 +286,7 @@ const AdminDashboard = () => {
       );
       return;
     }
-    const newQuiz: Quiz = {
+    const newQuiz: any = {
       _id: `quiz-${Date.now()}`,
       title: manualTitle,
       questionPool: manualQuestions.map((q, i) => ({

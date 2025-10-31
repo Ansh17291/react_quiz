@@ -29,7 +29,9 @@ const storage = multer.diskStorage({
   filename: function (req, file, cb) {
     const unique = Date.now() + "-" + Math.round(Math.random() * 1e9);
     const ext = path.extname(file.originalname);
-    const base = path.basename(file.originalname, ext).replace(/[^a-z0-9-_]/gi, "_");
+    const base = path
+      .basename(file.originalname, ext)
+      .replace(/[^a-z0-9-_]/gi, "_");
     cb(null, `${base}-${unique}${ext}`);
   },
 });
@@ -75,14 +77,14 @@ app.get("/api/results", async (req, res) => {
 });
 
 app.get("/api/discussions", async (req, res) => {
-  const discussionsPost = await DiscussionPost.find();
+  const discussionsPost = await DiscussionPost.find().populate(
+    "DiscussionReply"
+  );
   const discussionsReply = await DiscussionReply.find();
   res.json({ post: discussionsPost, reply: discussionsReply });
 });
 
 app.post("/api/discussions", async (req, res) => {
-  console.log(req.body);
-
   const discussion = DiscussionPost.create({
     title: req.body.title,
     content: req.body.content,
@@ -90,6 +92,34 @@ app.post("/api/discussions", async (req, res) => {
   });
 
   res.json(discussion);
+});
+
+app.post("/api/discussions/reply", async (req, res) => {
+  try {
+    const { postId, authorId, content } = req.body;
+
+    // Create the reply
+    const createReply = await DiscussionReply.create({
+      authorId,
+      content,
+    });
+
+    // Find the main post and push the reply ID
+    const mainPost = await DiscussionPost.findById(postId);
+    if (!mainPost) {
+      return res.status(404).json({ error: "Discussion post not found" });
+    }
+
+    mainPost.replies.push(createReply._id);
+    await mainPost.save();
+
+    console.log(createReply, "\n\n\n", mainPost);
+
+    res.json({ message: "Reply added to discussion post", reply: createReply });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Something went wrong" });
+  }
 });
 
 app.get("/api/assignment/:id", async (req, res) => {
@@ -227,37 +257,43 @@ app.get("/api/resources/download/:filename", async (req, res) => {
 });
 
 // Upload for quiz generation - accepts txt, docx, xlsx, pptx (pptx stored only)
-app.post("/api/quizzes/generate-from-upload", upload.single("file"), async (req, res) => {
-  try {
-    if (!req.file) return res.status(400).json({ error: "No file uploaded" });
-    const ext = path.extname(req.file.originalname).toLowerCase();
-    let extractedText = "";
-    if (ext === ".txt") {
-      extractedText = fs.readFileSync(req.file.path, "utf8");
-    } else if (ext === ".docx") {
-      const result = await mammoth.extractRawText({ path: req.file.path });
-      extractedText = result.value || "";
-    } else if (ext === ".xlsx") {
-      const wb = XLSX.readFile(req.file.path);
-      const sheets = wb.SheetNames;
-      const parts = sheets.map((name) => XLSX.utils.sheet_to_csv(wb.Sheets[name]));
-      extractedText = parts.join("\n");
-    } else if (ext === ".pptx") {
-      // Not parsed; keep for resources and future parsing
-      extractedText = "";
-    } else {
-      return res.status(415).json({ error: "Unsupported file type" });
+app.post(
+  "/api/quizzes/generate-from-upload",
+  upload.single("file"),
+  async (req, res) => {
+    try {
+      if (!req.file) return res.status(400).json({ error: "No file uploaded" });
+      const ext = path.extname(req.file.originalname).toLowerCase();
+      let extractedText = "";
+      if (ext === ".txt") {
+        extractedText = fs.readFileSync(req.file.path, "utf8");
+      } else if (ext === ".docx") {
+        const result = await mammoth.extractRawText({ path: req.file.path });
+        extractedText = result.value || "";
+      } else if (ext === ".xlsx") {
+        const wb = XLSX.readFile(req.file.path);
+        const sheets = wb.SheetNames;
+        const parts = sheets.map((name) =>
+          XLSX.utils.sheet_to_csv(wb.Sheets[name])
+        );
+        extractedText = parts.join("\n");
+      } else if (ext === ".pptx") {
+        // Not parsed; keep for resources and future parsing
+        extractedText = "";
+      } else {
+        return res.status(415).json({ error: "Unsupported file type" });
+      }
+      res.json({
+        fileUrl: `/uploads/${req.file.filename}`,
+        originalName: req.file.originalname,
+        text: extractedText,
+      });
+    } catch (e) {
+      console.error(e);
+      res.status(500).json({ error: "Failed to process upload" });
     }
-    res.json({
-      fileUrl: `/uploads/${req.file.filename}`,
-      originalName: req.file.originalname,
-      text: extractedText,
-    });
-  } catch (e) {
-    console.error(e);
-    res.status(500).json({ error: "Failed to process upload" });
   }
-});
+);
 
 app.post("/api/delete", async (req, res) => {
   const user = await User.findByIdAndDelete(req.body.userId);
