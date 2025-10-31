@@ -185,7 +185,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
     quiz: Quiz,
     assignment: Omit<QuizAssignment, "id" | "quizId">
   ): Promise<{ newQuiz: Quiz; newAssignment: QuizAssignment }> => {
-    const quizData = await axios.post(`${BASE}/api/create-quiz`, {
+    const quizData = await axios.post(`${BASE}/create-quiz`, {
       quiz,
       pool: quiz.questionPool,
       assignment,
@@ -199,7 +199,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
   const addResult = async (result: QuizResult) => {
     console.log("Adding result for quiz:", result.quizId);
     const results = await axios.post(
-      `${BASE}/api/quizzes/${result.quizId}/submit`,
+      `${BASE}/quizzes/${result.quizId}/submit`,
       {
         result,
       }
@@ -237,7 +237,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
   };
 
   const removeUser = async (userId: string) => {
-    const data = await axios.post(`${BASE}/api/delete`, {
+    const data = await axios.post(`${BASE}/delete`, {
       userId,
     });
     console.log("User removed:", data);
@@ -280,15 +280,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
     };
     console.log(postId);
 
-    const data = await axios.post(
-      "http://localhost:8080/api/discussions/reply",
-      {
-        optimistic: {
-          postId,
-          ...optimistic,
-        },
-      }
-    );
+    const data = await axios.post("/discussions/reply", {
+      optimistic: {
+        postId,
+        ...optimistic,
+      },
+    });
 
     console.log(data.data);
 

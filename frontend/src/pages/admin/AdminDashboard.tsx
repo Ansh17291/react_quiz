@@ -176,7 +176,7 @@ const AdminDashboard = () => {
     try {
       const form = new FormData();
       form.append("file", file);
-      const resp = await fetch(`${BASE}/api/quizzes/generate-from-upload`, {
+      const resp = await fetch(`${BASE}/quizzes/generate-from-upload`, {
         method: "POST",
         body: form,
       });
@@ -221,7 +221,7 @@ const AdminDashboard = () => {
       const form = new FormData();
       form.append("file", file);
       form.append("title", file.name);
-      const resp = await fetch(`${BASE}/api/resources/upload`, {
+      const resp = await fetch(`${BASE}/resources/upload`, {
         method: "POST",
         body: form,
       });
@@ -351,7 +351,7 @@ const AdminDashboard = () => {
 
     setIsAddingTeacher(true);
     try {
-      const response = await fetch(`${BASE}/api/user/teacher-signup`, {
+      const response = await fetch(`${BASE}/user/teacher-signup`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

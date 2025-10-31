@@ -25,7 +25,7 @@ const LoginPage = () => {
   const handleStudentLogin = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const user = await axios.post(`${BASE}/api/user/student-login`, {
+    const user = await axios.post(`${BASE}/user/student-login`, {
       name,
       password,
     });
@@ -46,7 +46,7 @@ const LoginPage = () => {
       return;
     }
 
-    const user = await axios.post(`${BASE}/api/user/signup`, {
+    const user = await axios.post(`${BASE}/user/signup`, {
       username: name,
       password: password,
     });
@@ -66,7 +66,7 @@ const LoginPage = () => {
   const handleStaffLogin = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const user = await axios.post(`${BASE}/api/user/teacher-login`, {
+    const user = await axios.post(`${BASE}/user/teacher-login`, {
       name,
       password,
     });

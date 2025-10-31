@@ -215,7 +215,7 @@ const TeacherDashboard = () => {
                       const form = new FormData();
                       form.append("file", file);
                       const resp = await fetch(
-                        `${BASE}/api/quizzes/generate-from-upload`,
+                        `${BASE}/quizzes/generate-from-upload`,
                         { method: "POST", body: form }
                       );
                       if (!resp.ok)
