@@ -166,11 +166,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
   }, []);
 
   const login = async (user: any) => {
-    console.log("Login user:", user);
-
-    // Normalize the user object to ensure both id and _id exist
+    
     const normalizedUser = normalizeUser(user.user || user);
-    console.log("Normalized user:", normalizedUser);
+    
 
     setCurrentUser(normalizedUser);
 
@@ -190,14 +188,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
       pool: quiz.questionPool,
       assignment,
     });
-    console.log(quizData);
+   
     const newQuiz = quizData.data.quiz;
     const newAssignment = quizData.data.assignment;
     return { newQuiz, newAssignment };
   };
 
   const addResult = async (result: QuizResult) => {
-    console.log("Adding result for quiz:", result.quizId);
+   
     const results = await axios.post(
       `${BASE}/api/quizzes/${result.quizId}/submit`,
       {
@@ -205,7 +203,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
       }
     );
 
-    console.log("Result submitted:", results.data);
+    
     // Optimistically update results; points will be recalculated in the effect below
     setResults((prev) => [...prev, results.data || result]);
   };
@@ -237,10 +235,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
   };
 
   const removeUser = async (userId: string) => {
-    const data = await axios.post(`${BASE}/api/delete`, {
+    const data=  await axios.post(`${BASE}/api/delete`, {
       userId,
     });
-    console.log("User removed:", data);
+   
+console.log(data.data);
     // Normalize the returned users
     const normalizedUsers = data.data.map((u: any) => normalizeUser(u));
     setUsers(normalizedUsers);
@@ -278,10 +277,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
       createdAt: new Date().toISOString(),
       id: postId,
     };
-    console.log(postId);
+   
 
-    const data = await axios.post(
-      "http://localhost:8080/api/discussions/reply",
+    await axios.post(
+      "/api/discussions/reply",
       {
         optimistic: {
           postId,
@@ -290,7 +289,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
       }
     );
 
-    console.log(data.data);
+   
 
     // Optimistic UI update
     // setDiscussionPosts((prev) =>

@@ -75,8 +75,8 @@ const QuizResults = () => {
           return;
         }
 
-        // console.log("Quiz data:", quizData);
-        // console.log("Result data:", resultData);
+        
+        
 
         setQuiz(quizData);
         setResult(resultData);
@@ -253,7 +253,6 @@ const QuizResults = () => {
         <div className="space-y-6">
           {quiz.questionPool
             .map((q: any) => {
-              // Normalize the question ID to handle both _id and id
               const questionId = q._id || q.id;
               const studentAnswer = result.answers.find(
                 (a: any) => a.questionId === questionId
@@ -270,14 +269,6 @@ const QuizResults = () => {
               const isCorrect = studentAnswer.isCorrect;
               const selectedOption = studentAnswer.selectedOptionIndex;
               const correctOption = question.correctAnswerIndex;
-
-              // console.log("Rendering question:", {
-              //   questionId: question.id,
-              //   text: question.questionText,
-              //   selectedOption,
-              //   correctOption,
-              //   isCorrect,
-              // });
 
               return (
                 <div key={question.id} className="p-4 rounded-lg bg-slate-800">
@@ -315,8 +306,7 @@ const QuizResults = () => {
                             {option}
                           </span>
                         </div>
-                      )
-                    )}
+                      ))}
                   </div>
                   {!isCorrect && (
                     <div className="mt-3">

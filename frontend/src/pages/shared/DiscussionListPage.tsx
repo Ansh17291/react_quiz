@@ -35,8 +35,6 @@ const DiscussionListPage = () => {
         setError(null);
         const posts = await api.getPosts();
 
-        console.log(posts);
-
         // Sort posts by creation date (newest first)
         const sortedPosts = (posts || []).sort(
           (a: any, b: any) =>

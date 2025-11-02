@@ -60,8 +60,7 @@ const QuizTaker = () => {
           return;
         }
 
-        // console.log("Assignment data:", assignmentData);
-        // console.log("Quiz data:", quizData);
+        
         setAssignment(assignmentData);
         setQuiz(quizData);
       } catch (err) {
@@ -103,14 +102,6 @@ const QuizTaker = () => {
         (opt) => opt === originalCorrectAnswerText
       );
 
-      // console.log("Question:", {
-      //   id: questionId,
-      //   text: q.questionText,
-      //   originalCorrectIndex: q.correctAnswerIndex,
-      //   newCorrectIndex: newCorrectAnswerIndex,
-      //   originalCorrectAnswer: originalCorrectAnswerText,
-      // });
-
       return {
         ...q,
         id: questionId, // Ensure we have a consistent id field
@@ -119,7 +110,7 @@ const QuizTaker = () => {
       };
     });
 
-    // console.log("Ready questions:", readyQuestions);
+    
     // Randomize final question order for display
     const randomizedQuestions = shuffleArray(readyQuestions);
     setActiveQuestions(randomizedQuestions);
@@ -163,22 +154,6 @@ const QuizTaker = () => {
           ? selectedOptionIndex === original.correctAnswerIndex
           : false;
 
-      // console.log(selectedOptionIndex);
-      // console.log(q.correctAnswerIndex);
-
-      // console.log("Question submission:", {
-      //   questionId: q.id,
-      //   questionText: q.questionText,
-      //   selectedIndex: selectedOptionIndex,
-      //   correctIndex: q.correctAnswerIndex,
-      //   selectedAnswer:
-      //     selectedOptionIndex >= 0
-      //       ? q.options[selectedOptionIndex]
-      //       : "No answer",
-      //   correctAnswer: q.options[q.correctAnswerIndex],
-      //   isCorrect,
-      // });
-
       return {
         questionId: q.id,
         selectedOptionIndex,
@@ -187,12 +162,7 @@ const QuizTaker = () => {
     });
 
     const correctCount = studentAnswers.filter((a) => a.isCorrect).length;
-    console.log(
-      "Total correct:",
-      correctCount,
-      "out of",
-      activeQuestions.length
-    );
+   
 
     const score = Math.round((correctCount / activeQuestions.length) * 100);
     const timeTaken = Math.round((Date.now() - startTime) / 1000);
@@ -206,7 +176,7 @@ const QuizTaker = () => {
       submittedAt: new Date(),
     };
 
-    console.log("Final result:", result);
+   
     addResult(result);
     navigate(`/results/${quiz._id}`, { replace: true });
   }
@@ -257,7 +227,6 @@ const QuizTaker = () => {
   }, [isQuizStarted, quiz, assignment, navigate]);
 
   const handleAnswerSelect = (questionId: string, optionIndex: number) => {
-    console.log("Answer selected:", { questionId, optionIndex });
     setSelectedAnswers((prev) => ({ ...prev, [questionId]: optionIndex }));
   };
 

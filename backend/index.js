@@ -155,7 +155,7 @@ app.get("/api/results", async (req, res) => {
 
 app.get("/api/discussions", async (req, res) => {
   const discussionsPost = await DiscussionPost.find().populate(
-    "DiscussionReply"
+    "DicsuissionReply"
   );
   const discussionsReply = await DiscussionReply.find();
   res.json({ post: discussionsPost, reply: discussionsReply });
@@ -173,7 +173,7 @@ app.post("/api/discussions", async (req, res) => {
 
 app.post("/api/discussions/reply", async (req, res) => {
   try {
-    const { authorId, content } = req.body.optimistic;
+    const { authorId, content ,postId } = req.body.optimistic;
 
     // Create the reply
     const createReply = await DiscussionReply.create({
@@ -182,7 +182,7 @@ app.post("/api/discussions/reply", async (req, res) => {
     });
 
     // Find the main post and push the reply ID
-    const mainPost = await DiscussionPost.findById(req.body.postId);
+    const mainPost = await DiscussionPost.findById(postId);
     if (!mainPost) {
       return res.status(404).json({ error: "Discussion post not found" });
     }
@@ -321,7 +321,7 @@ app.post("/api/user/student-login", async (req, res) => {
   // console.log(name);
   if (!name || !password)
     return res.status(400).json({ error: "name and password required" });
-  // const user = await User.findOne({ name });
+  const user = await User.findOne({ name });
   if (!user) return res.status(401).json({ error: "Invalid credentials" });
   const ok = await bcrypt.compare(password, user.password || "");
   if (!ok) return res.status(401).json({ error: "Invalid credentials" });

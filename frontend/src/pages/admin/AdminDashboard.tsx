@@ -66,8 +66,7 @@ const AdminDashboard = () => {
 
   useEffect(() => {
     const fetchData = async () => {
-      const data = await api.getUsers();
-      console.log(data);
+      const data = await api.getUsers(); 
       students.current = (data || []).filter((u) => u.role === "STUDENT");
     };
     fetchData();
@@ -76,7 +75,6 @@ const AdminDashboard = () => {
   useEffect(() => {
     const fetchData = async () => {
       const data = await api.getUsers();
-      console.log(data);
       teachers.current = (data || []).filter((u) => u.role === "TEACHER");
     };
     fetchData();
