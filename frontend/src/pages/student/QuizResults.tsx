@@ -154,6 +154,7 @@ const QuizResults = () => {
         newAssignment: {},
         id: `quiz-${Date.now()}`,
         title,
+        isPractice: true,
         questionPool: questions.map((q, i) => ({
           ...q,
           id: `q-${Date.now()}-${i}`,

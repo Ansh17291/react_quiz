@@ -165,7 +165,7 @@ const LeaderboardPage = () => {
                   className="w-full p-2 mb-4 border rounded-md bg-slate-700 border-slate-600"
                 >
                   <option value="">-- Select a Quiz --</option>
-                  {quizzes.map((q) => (
+                  {quizzes.filter((q) => !q.isPractice).map((q) => (
                     <option key={q._id} value={q._id}>
                       {q.title}
                     </option>

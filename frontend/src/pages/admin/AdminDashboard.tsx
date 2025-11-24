@@ -69,14 +69,6 @@ const AdminDashboard = () => {
       const data = await api.getUsers();
       console.log(data);
       students.current = (data || []).filter((u) => u.role === "STUDENT");
-    };
-    fetchData();
-  }, []);
-
-  useEffect(() => {
-    const fetchData = async () => {
-      const data = await api.getUsers();
-      console.log(data);
       teachers.current = (data || []).filter((u) => u.role === "TEACHER");
     };
     fetchData();
@@ -176,7 +168,7 @@ const AdminDashboard = () => {
     try {
       const form = new FormData();
       form.append("file", file);
-      const resp = await fetch(`${BASE}/quizzes/generate-from-upload`, {
+      const resp = await fetch(`${BASE}/api/quizzes/generate-from-upload`, {
         method: "POST",
         body: form,
       });

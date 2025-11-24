@@ -9,6 +9,11 @@ const multer = require("multer");
 const XLSX = require("xlsx");
 const mammoth = require("mammoth");
 const JSZip = require("jszip");
+const io = require("socket.io")(3000, {
+  cors: {
+    origin: "*",
+  },
+});
 
 const aes256 = require("aes256");
 const { encryptString, decryptString } = require("./utils/crypto");
@@ -16,6 +21,7 @@ const { encryptString, decryptString } = require("./utils/crypto");
 const encryptKey = process.env.ENCRYPT_KEY || "my passphrase";
 
 const app = express();
+
 const PORT = process.env.PORT || 8080;
 
 // middleware
@@ -229,15 +235,21 @@ app.get("/api/quizzes", async (req, res) => {
 });
 
 app.post("/api/quizzes/:quizID/submit", async (req, res) => {
-  // console.log(req.body.result);
-
-  const results = await QuizResult.create({
-    quizId: req.body.result.quizId,
-    userId: req.body.result.userId,
-    score: req.body.result.score,
-    answers: req.body.result.answers,
-  });
-  res.json(results);
+  try {
+    const resultData = req.body;
+    const results = await QuizResult.create({
+      quizId: resultData.quizId,
+      userId: resultData.userId,
+      score: resultData.score,
+      answers: resultData.answers,
+      timeTaken: resultData.timeTaken,
+      submittedAt: resultData.submittedAt,
+    });
+    res.json(results);
+  } catch (error) {
+    console.error("Failed to submit quiz result:", error);
+    res.status(500).json({ error: "Failed to submit quiz result" });
+  }
 });
 
 // Create a quiz (intended for teachers)
@@ -321,7 +333,7 @@ app.post("/api/user/student-login", async (req, res) => {
   // console.log(name);
   if (!name || !password)
     return res.status(400).json({ error: "name and password required" });
-  // const user = await User.findOne({ name });
+  const user = await User.findOne({ name });
   if (!user) return res.status(401).json({ error: "Invalid credentials" });
   const ok = await bcrypt.compare(password, user.password || "");
   if (!ok) return res.status(401).json({ error: "Invalid credentials" });
@@ -365,7 +377,6 @@ app.post("/api/user/teacher-signup", async (req, res) => {
   const token = signToken(newUser);
   res.status(201).json({ user: newUser, token });
 });
-
 
 // Resources
 app.get("/api/resources", async (req, res) => {
@@ -451,8 +462,8 @@ app.post(
       } else if (ext === ".pptx") {
         const buffer = fs.readFileSync(req.file.path);
         const zip = await JSZip.loadAsync(buffer);
-        const slideFiles = Object.keys(zip.files).filter((name) =>
-          name.startsWith("ppt/slides/slide") && name.endsWith(".xml")
+        const slideFiles = Object.keys(zip.files).filter(
+          (name) => name.startsWith("ppt/slides/slide") && name.endsWith(".xml")
         );
         const parts = await Promise.all(
           slideFiles.map(async (name) => {
@@ -502,6 +513,7 @@ app.post("/api/create-quiz", async (req, res) => {
     const newQuiz = await Quiz.create({
       title: req.body.quiz.title,
       questionPool: questionIds,
+      isPractice: req.body.quiz.isPractice || false,
     });
 
     const newAssignment = await QuizAssignment.create({
@@ -544,6 +556,15 @@ app.post("/api/user/signup", async (req, res) => {
 app.use((err, req, res, next) => {
   console.error(err);
   res.status(500).json({ error: "Internal Server Error" });
+});
+
+io.on("connection", (socket) => {
+  console.log("Client connected:", socket.id);
+
+  socket.on("hi", (msg) => {
+    console.log("From client:", msg);
+    io.emit("message", msg); // broadcast back
+  });
 });
 
 app.listen(PORT, () => {

@@ -27,6 +27,72 @@ const QuizTaker = () => {
     Record<string, boolean>
   >({});
 
+  const handleSubmit = useCallback(async () => {
+    if (!quiz || !currentUser || activeQuestions.length === 0) return;
+
+    const studentAnswers: StudentAnswer[] = activeQuestions.map((q) => {
+      const selectedOptionIndexShuffled = selectedAnswers[q.id] ?? -1;
+
+      // Map the selected option back to the ORIGINAL quiz option index
+      const original = (quiz.questionPool || []).find(
+        (orig: any) => (orig._id || orig.id) === q.id
+      );
+      const selectedAnswerText =
+        selectedOptionIndexShuffled >= 0
+          ? q.options[selectedOptionIndexShuffled]
+          : undefined;
+      const selectedOptionIndex =
+        original && selectedAnswerText
+          ? original.options.findIndex(
+              (opt: string) => opt === selectedAnswerText
+            )
+          : -1;
+
+      const isCorrect =
+        original && selectedOptionIndex >= 0
+          ? selectedOptionIndex === original.correctAnswerIndex
+          : false;
+
+      return {
+        questionId: q.id,
+        selectedOptionIndex,
+        isCorrect,
+      };
+    });
+
+    const correctCount = studentAnswers.filter((a) => a.isCorrect).length;
+    console.log(
+      "Total correct:",
+      correctCount,
+      "out of",
+      activeQuestions.length
+    );
+
+    const score = Math.round((correctCount / activeQuestions.length) * 100);
+    const timeTaken = Math.round((Date.now() - startTime) / 1000);
+
+    const result: QuizResult = {
+      quizId: quiz._id,
+      userId: currentUser._id,
+      score,
+      answers: studentAnswers,
+      timeTaken,
+      submittedAt: new Date(),
+    };
+
+    console.log("Final result:", result);
+    await addResult(result);
+    navigate(`/results/${quiz._id}`, { replace: true });
+  }, [
+    quiz,
+    currentUser,
+    activeQuestions,
+    selectedAnswers,
+    startTime,
+    addResult,
+    navigate,
+  ]);
+
   const handleSubmitRef = useRef(handleSubmit);
   handleSubmitRef.current = handleSubmit;
 
@@ -136,80 +202,6 @@ const QuizTaker = () => {
       );
     });
   }, [quiz, assignment]);
-
-  function handleSubmit() {
-    if (!quiz || !currentUser || activeQuestions.length === 0) return;
-
-    const studentAnswers: StudentAnswer[] = activeQuestions.map((q) => {
-      const selectedOptionIndexShuffled = selectedAnswers[q.id] ?? -1;
-
-      // Map the selected option back to the ORIGINAL quiz option index
-      const original = (quiz.questionPool || []).find(
-        (orig: any) => (orig._id || orig.id) === q.id
-      );
-      const selectedAnswerText =
-        selectedOptionIndexShuffled >= 0
-          ? q.options[selectedOptionIndexShuffled]
-          : undefined;
-      const selectedOptionIndex =
-        original && selectedAnswerText
-          ? original.options.findIndex(
-              (opt: string) => opt === selectedAnswerText
-            )
-          : -1;
-
-      const isCorrect =
-        original && selectedOptionIndex >= 0
-          ? selectedOptionIndex === original.correctAnswerIndex
-          : false;
-
-      // console.log(selectedOptionIndex);
-      // console.log(q.correctAnswerIndex);
-
-      // console.log("Question submission:", {
-      //   questionId: q.id,
-      //   questionText: q.questionText,
-      //   selectedIndex: selectedOptionIndex,
-      //   correctIndex: q.correctAnswerIndex,
-      //   selectedAnswer:
-      //     selectedOptionIndex >= 0
-      //       ? q.options[selectedOptionIndex]
-      //       : "No answer",
-      //   correctAnswer: q.options[q.correctAnswerIndex],
-      //   isCorrect,
-      // });
-
-      return {
-        questionId: q.id,
-        selectedOptionIndex,
-        isCorrect,
-      };
-    });
-
-    const correctCount = studentAnswers.filter((a) => a.isCorrect).length;
-    console.log(
-      "Total correct:",
-      correctCount,
-      "out of",
-      activeQuestions.length
-    );
-
-    const score = Math.round((correctCount / activeQuestions.length) * 100);
-    const timeTaken = Math.round((Date.now() - startTime) / 1000);
-
-    const result: QuizResult = {
-      quizId: quiz._id,
-      userId: currentUser._id,
-      score,
-      answers: studentAnswers,
-      timeTaken,
-      submittedAt: new Date(),
-    };
-
-    console.log("Final result:", result);
-    addResult(result);
-    navigate(`/results/${quiz._id}`, { replace: true });
-  }
 
   // Proctoring and Timer effect
   useEffect(() => {

@@ -1,6 +1,6 @@
 import type { Quiz, QuizResult, Resource, DiscussionPost } from '../types';
 
-export const BASE = ""
+export const BASE = "http://localhost:8080"
 
 async function request(path: string, opts: RequestInit = {}) {
     const res = await fetch(`${BASE}${path}`, {
@@ -20,25 +20,25 @@ async function request(path: string, opts: RequestInit = {}) {
 export const api = {
     health: async () => {
         try {
-            await request('/health');
+            await request('/api/health');
             return true;
         } catch (e) {
             return false;
         }
     },
-    getUsers: () => request('/users'),
-    getQuizzes: () => request('/quizzes'),
+    getUsers: () => request('/api/users'),
+    getQuizzes: () => request('/api/quizzes'),
     getQuiz: (id: string) => request(`/quizzes/${id}`),
     addQuiz: (quiz: Partial<Quiz>) => request('/quizzes', { method: 'POST', body: JSON.stringify(quiz) }),
-    submitQuizResult: (quizId: string, payload: Partial<QuizResult>) => request(`/quizzes/${quizId}/submit`, { method: 'POST', body: JSON.stringify(payload) }),
-    getResults: () => request('/results').catch(() => []),
-    getAssignments: () => request('/assignment').catch(() => []),
+    submitQuizResult: (quizId: string, payload: Partial<QuizResult>) => request(`/api/quizzes/${quizId}/submit`, { method: 'POST', body: JSON.stringify(payload) }),
+    getResults: () => request('/api/results').catch(() => []),
+    getAssignments: () => request('/api/assignment').catch(() => []),
     createAssignment: (payload: { quizId: string; studentIds: string[]; deadline?: string; timeLimit?: number; numQuestionsToAssign?: number; isLive?: boolean; }) => request('/assignments', { method: 'POST', body: JSON.stringify(payload) }),
-    getAssignmentByQuiz: (quizId: string) => request(`/assignments/by-quiz/${quizId}`),
-    updateAssignmentByQuiz: (quizId: string, payload: { studentIds: string[]; deadline?: string; timeLimit?: number; isLive?: boolean; }) => request(`/assignments/by-quiz/${quizId}`, { method: 'PUT', body: JSON.stringify(payload) }),
-    getResources: () => request('/resources'),
+    getAssignmentByQuiz: (quizId: string) => request(`/api/assignments/by-quiz/${quizId}`),
+    updateAssignmentByQuiz: (quizId: string, payload: { studentIds: string[]; deadline?: string; timeLimit?: number; isLive?: boolean; }) => request(`/api/assignments/by-quiz/${quizId}`, { method: 'PUT', body: JSON.stringify(payload) }),
+    getResources: () => request('/api/resources'),
     addResource: (r: Partial<Resource>) => request('/resources', { method: 'POST', body: JSON.stringify(r) }),
-    getPosts: () => request('/posts'),
+    getPosts: () => request('/api/posts'),
     getPost: (id: string) => request(`/posts/${id}`),
     // Backend creates posts at /discussions
     addPost: (p: Partial<DiscussionPost>) => request('/discussions', { method: 'POST', body: JSON.stringify(p) }),

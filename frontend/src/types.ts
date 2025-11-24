@@ -22,6 +22,7 @@ export interface Question {
 }
 
 export interface Quiz {
+  isPractice: unknown;
   _id: string;
   id: string;
   title: string;

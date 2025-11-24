@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   BarChart,
@@ -11,11 +11,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { useAppContext } from "../../context/AppContext";
-import {
-  AnimatedWrapper,
-  StaggeredList,
-} from "../../components/shared/AnimatedComponents";
-import { Button, Card, Spinner, Tabs } from "../../components/ui";
+import { Button, Card, Spinner, Tabs, useToast, Modal } from "../../components/ui";
 import {
   TrophyIcon,
   UploadIcon,
@@ -28,11 +24,15 @@ import {
   generateSimilarQuestions,
 } from "../../services/geminiService";
 import { BASE, api } from "../../services/api";
+import {
+  AnimatedWrapper,
+  StaggeredList,
+} from "../../components/shared/AnimatedComponents";
 
 const TeacherDashboard = () => {
-  const { users, results } = useAppContext();
+  const { users, results, addResource, removeUser } = useAppContext();
+  const { addToast } = useToast();
   const navigate = useNavigate();
-  const students = users.filter((u) => u.role === "STUDENT");
 
   const [activeTab, setActiveTab] = useState("Overview");
   const [isCreating, setIsCreating] = useState(false);
@@ -42,18 +42,123 @@ const TeacherDashboard = () => {
   const genInputRef = useRef<HTMLInputElement | null>(null);
   const [numQuestions, setNumQuestions] = useState(10);
   const [error, setError] = useState("");
+  const [uploadingResource, setUploadingResource] = useState(false);
+  const resourceInputRef = useRef<HTMLInputElement | null>(null);
 
   const [manualTitle, setManualTitle] = useState("");
   const [manualQuestions, setManualQuestions] = useState<any>([
     { questionText: "", options: ["", "", "", ""], correctAnswerIndex: 0 },
   ]);
+  
+  const students = useRef<any[]>([]);
+  const [editingUserId, setEditingUserId] = useState<string | null>(null);
+  const [newPassword, setNewPassword] = useState<string>("");
+  
+  // Add Student Modal State
+  const [isAddStudentModalOpen, setIsAddStudentModalOpen] = useState(false);
+  const [newStudentName, setNewStudentName] = useState("");
+  const [newStudentPassword, setNewStudentPassword] = useState("");
+  const [isAddingStudent, setIsAddingStudent] = useState(false);
+
+  useEffect(() => {
+    students.current = users.filter((u) => u.role === "STUDENT");
+  }, [users]);
+
+  const handleAddStudent = async () => {
+    if (!newStudentName.trim() || !newStudentPassword.trim()) {
+      addToast("Please provide both username and password.", "error");
+      return;
+    }
+
+    if (newStudentPassword.length < 6) {
+      addToast("Password must be at least 6 characters long.", "error");
+      return;
+    }
+
+    setIsAddingStudent(true);
+    try {
+      const response = await fetch(`${BASE}/api/user/signup`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          username: newStudentName,
+          password: newStudentPassword,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to add student");
+      }
+
+      const newStudent = await response.json();
+      students.current = [...students.current, newStudent];
+
+      addToast(`Student "${newStudentName}" added successfully!`, "success");
+      addToast(
+        `Credentials - Username: ${newStudentName}, Password: ${newStudentPassword}`,
+        "info"
+      );
+
+      // Reset form and close modal
+      setNewStudentName("");
+      setNewStudentPassword("");
+      setIsAddStudentModalOpen(false);
+    } catch (err) {
+      console.error(err);
+      addToast((err as Error).message || "Failed to add student", "error");
+    } finally {
+      setIsAddingStudent(false);
+    }
+  };
+
+  const handleUploadResourceFile = async (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingResource(true);
+    try {
+      const form = new FormData();
+      form.append("file", file);
+      form.append("title", file.name);
+      const resp = await fetch(`${BASE}/api/resources/upload`, {
+        method: "POST",
+        body: form,
+      });
+      if (!resp.ok) throw new Error(`Upload failed: ${resp.status}`);
+      const resource = await resp.json();
+      addResource({
+        ...(resource as any),
+        _id: resource._id || resource.id,
+        id: resource._id || resource.id,
+      } as any);
+      addToast("Resource uploaded and added to Resources", "success");
+    } catch (err) {
+      console.error(err);
+      addToast("Failed to upload resource", "error");
+    } finally {
+      setUploadingResource(false);
+    }
+  };
+
+  const handleRevokeStudent = (userId: string) => {
+    if (
+      window.confirm("Are you sure you want to revoke this student's access?")
+    ) {
+      removeUser(userId);
+      addToast("Student access revoked.", "success");
+    }
+  };
 
   const leaderboard = useMemo(() => {
-    return [...students].sort((a, b) => b.points - a.points);
-  }, [students]);
+    return [...students.current].sort((a, b) => b.points - a.points);
+  }, [students.current]);
 
   const studentPerformance = useMemo(() => {
-    return students.map((student) => {
+    return students.current.map((student) => {
       const studentResults = results.filter((r) => r.userId === student.id);
       const avgScore =
         studentResults.length > 0
@@ -66,7 +171,7 @@ const TeacherDashboard = () => {
         quizzesTaken: studentResults.length,
       };
     });
-  }, [students, results]);
+  }, [students.current, results]);
 
   const rankBadges = ["🥇", "🥈", "🥉"];
 
@@ -74,11 +179,20 @@ const TeacherDashboard = () => {
     <AnimatedWrapper className="space-y-8">
       <div className="flex items-center justify-between">
         <h2 className="text-3xl font-bold">Teacher Dashboard</h2>
-        <Tabs
-          tabs={["Overview", "Create Quiz"]}
-          activeTab={activeTab}
-          setActiveTab={setActiveTab}
-        />
+        <div className="flex justify-between">
+          <Button
+            onClick={() => navigate("/admin/quizzes")}
+            variant="secondary"
+            className="mr-16"
+          >
+            View All Quizzes
+          </Button>
+          <Tabs
+            tabs={["Overview", "Manage Students", "Create Quiz", "Upload Resources"]}
+            activeTab={activeTab}
+            setActiveTab={setActiveTab}
+          />
+        </div>
       </div>
 
       {activeTab === "Overview" && (
@@ -134,12 +248,94 @@ const TeacherDashboard = () => {
                 <Bar
                   dataKey="avgScore"
                   fill="#4f46e5"
-                  name="Average Score (%)"
+                  name={`Average Score (${(
+                    studentPerformance.reduce(
+                      (sum, item) => sum + item.avgScore,
+                      0
+                    ) / studentPerformance.length || 0
+                  ).toFixed(2)}%)`}
                 />
               </BarChart>
             </ResponsiveContainer>
           </Card>
         </div>
+      )}
+      
+      {activeTab === "Manage Students" && (
+        <Card>
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-xl font-semibold">Student Roster</h3>
+            <Button
+              onClick={() => setIsAddStudentModalOpen(true)}
+              variant="secondary"
+            >
+              <PlusCircleIcon className="w-5 h-5" />
+              Add Student
+            </Button>
+          </div>
+          <StaggeredList className="space-y-2">
+            {students.current.map((student) => (
+              <div
+                key={student._id}
+                className="flex justify-between items-center p-3 bg-slate-700 rounded-lg"
+              >
+                <span>{student.name}</span>
+                <div className="flex items-center gap-2">
+                  {editingUserId === student._id ? (
+                    <>
+                      <input
+                        type="password"
+                        placeholder="New password"
+                        className="p-2 rounded bg-slate-800 border border-slate-600"
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                      />
+                      <Button
+                        variant="secondary"
+                        onClick={async () => {
+                          if (!newPassword.trim()) return;
+                          await api.updateUserPassword(
+                            student._id,
+                            newPassword
+                          );
+                          setEditingUserId(null);
+                          setNewPassword("");
+                          addToast("Password updated", "success");
+                        }}
+                      >
+                        Save
+                      </Button>
+                      <Button
+                        variant="secondary"
+                        onClick={() => {
+                          setEditingUserId(null);
+                          setNewPassword("");
+                        }}
+                      >
+                        Cancel
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <Button
+                        variant="secondary"
+                        onClick={() => setEditingUserId(student._id)}
+                      >
+                        Edit Password
+                      </Button>
+                      <Button
+                        variant="danger"
+                        onClick={() => handleRevokeStudent(student._id)}
+                      >
+                        Revoke Access
+                      </Button>
+                    </>
+                  )}
+                </div>
+              </div>
+            ))}
+          </StaggeredList>
+        </Card>
       )}
 
       {activeTab === "Create Quiz" && (
@@ -215,7 +411,7 @@ const TeacherDashboard = () => {
                       const form = new FormData();
                       form.append("file", file);
                       const resp = await fetch(
-                        `${BASE}/quizzes/generate-from-upload`,
+                        `${BASE}/api/quizzes/generate-from-upload`,
                         { method: "POST", body: form }
                       );
                       if (!resp.ok)
@@ -408,6 +604,88 @@ const TeacherDashboard = () => {
           </Card>
         </div>
       )}
+
+      {activeTab === "Upload Resources" && (
+        <Card>
+          <h3 className="text-xl font-semibold mb-4">Upload Resource File</h3>
+          <p className="text-slate-300 mb-2">
+            Upload Word/Excel/PPT/Text files to Resources for students to
+            download.
+          </p>
+          <div className="flex items-center gap-4">
+            <label className="cursor-pointer">
+              <Button
+                variant="secondary"
+                disabled={uploadingResource}
+                onClick={() => resourceInputRef.current?.click()}
+              >
+                <UploadIcon className="w-5 h-5" /> Upload Resource
+              </Button>
+            </label>
+            <input
+              id="resource-upload"
+              type="file"
+              accept=".docx,.xlsx,.pptx,.txt,.pdf"
+              className="hidden"
+              onChange={handleUploadResourceFile}
+              ref={resourceInputRef}
+            />
+          </div>
+        </Card>
+      )}
+
+      {/* Add Student Modal */}
+      <Modal
+        isOpen={isAddStudentModalOpen}
+        onClose={() => {
+          setIsAddStudentModalOpen(false);
+          setNewStudentName("");
+          setNewStudentPassword("");
+        }}
+        title="Add New Student"
+      >
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium mb-2">
+              Student Username
+            </label>
+            <input
+              type="text"
+              value={newStudentName}
+              onChange={(e) => setNewStudentName(e.target.value)}
+              placeholder="Enter username"
+              className="w-full p-2 border rounded-md bg-slate-700 border-slate-600 focus:ring-primary-500 focus:border-primary-500"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-2">Password</label>
+            <input
+              type="password"
+              value={newStudentPassword}
+              onChange={(e) => setNewStudentPassword(e.target.value)}
+              placeholder="Enter password (min 6 characters)"
+              className="w-full p-2 border rounded-md bg-slate-700 border-slate-600 focus:ring-primary-500 focus:border-primary-500"
+            />
+            <p className="text-xs text-slate-400 mt-1">
+              Make sure to save these credentials - they will be shown once
+              after creation
+            </p>
+          </div>
+          <Button
+            onClick={handleAddStudent}
+            className="w-full"
+            disabled={isAddingStudent}
+          >
+            {isAddingStudent ? (
+              <>
+                <Spinner /> Adding Student...
+              </>
+            ) : (
+              "Add Student"
+            )}
+          </Button>
+        </div>
+      </Modal>
     </AnimatedWrapper>
   );
 };

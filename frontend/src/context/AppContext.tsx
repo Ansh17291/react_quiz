@@ -79,10 +79,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
   // Calculate total points for a user from results
   const calculateUserPoints = (
     userId: string,
-    allResults: QuizResult[]
+    allResults: QuizResult[],
+    allQuizzes: Quiz[]
   ): number => {
+    const practiceQuizIds = new Set(
+      allQuizzes.filter((q) => q.isPractice).map((q) => q._id || q.id)
+    );
     return (allResults || [])
-      .filter((r) => r.userId === userId)
+      .filter(
+        (r) => r.userId === userId && !practiceQuizIds.has(r.quizId)
+      )
       .reduce((sum, r) => sum + (r.score || 0), 0);
   };
 
@@ -117,6 +123,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
           title: q.title,
           questionPool: q.questionPool || [],
           createdBy: q.createdBy || q.createdBy,
+          isPractice: q.isPractice,
         }));
         const normResources = (resourcesResp || []).map((r: any) => ({
           id: r._id || r.id,
@@ -145,7 +152,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
         // Derive points from results to keep UI consistent
         const usersWithPoints = normUsers.map((u: User) => ({
           ...u,
-          points: calculateUserPoints(u._id || u.id, resultsList),
+          points: calculateUserPoints(u._id || u.id, resultsList, normQuizzes),
         }));
 
         setUsers(usersWithPoints);
@@ -183,9 +190,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const addQuiz = async (
     quiz: Quiz,
-    assignment: Omit<QuizAssignment, "id" | "quizId">
+    assignment: Omit<QuizAssignment, "id" | "quizId" | "_id">
   ): Promise<{ newQuiz: Quiz; newAssignment: QuizAssignment }> => {
-    const quizData = await axios.post(`${BASE}/create-quiz`, {
+    const quizData = await axios.post(`${BASE}/api/create-quiz`, {
       quiz,
       pool: quiz.questionPool,
       assignment,
@@ -193,21 +200,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
     console.log(quizData);
     const newQuiz = quizData.data.quiz;
     const newAssignment = quizData.data.assignment;
+
+    setQuizzes((prevQuizzes) => [...prevQuizzes, newQuiz]);
+    setAssignments((prevAssignments) => [...prevAssignments, newAssignment]);
+
     return { newQuiz, newAssignment };
   };
 
   const addResult = async (result: QuizResult) => {
-    console.log("Adding result for quiz:", result.quizId);
-    const results = await axios.post(
-      `${BASE}/quizzes/${result.quizId}/submit`,
-      {
-        result,
-      }
-    );
-
-    console.log("Result submitted:", results.data);
-    // Optimistically update results; points will be recalculated in the effect below
-    setResults((prev) => [...prev, results.data || result]);
+    try {
+      console.log("Adding result for quiz:", result.quizId);
+      const newResult = await api.submitQuizResult(result.quizId, result);
+      console.log("Result submitted:", newResult);
+      // Optimistically update results; points will be recalculated in the effect below
+      setResults((prev) => [...prev, newResult || result]);
+    } catch (error) {
+      console.error("Failed to submit quiz result:", error);
+      // Optionally, show an error to the user
+    }
   };
 
   const updateUserPoints = (userId: string, points: number) => {
@@ -345,10 +355,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
     setUsers((prev) =>
       prev.map((u) => ({
         ...u,
-        points: calculateUserPoints(u._id || u.id, results),
+        points: calculateUserPoints(u._id || u.id, results, quizzes),
       }))
     );
-  }, [results]);
+  }, [results, quizzes]);
 
   const contextValue = useMemo(
     () => ({
