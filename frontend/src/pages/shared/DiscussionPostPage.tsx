@@ -214,6 +214,3 @@ const DiscussionPostPage = () => {
 };
 
 export default DiscussionPostPage;
-function fetchPost() {
-  throw new Error("Function not implemented.");
-}

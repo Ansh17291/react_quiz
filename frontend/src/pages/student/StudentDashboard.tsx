@@ -130,7 +130,7 @@ const StudentDashboard = () => {
 
     socket.on("deassignQuiz", ({ quizId, studentIds }) => {
       if (studentIds.includes(currentUserId)) {
-        addToast("A quiz has been unassigned.", "warning");
+        addToast("A quiz has been unassigned.", "info");
         setStudentAssignments((prev) =>
           prev.filter((assignment) => assignment.quizId !== quizId)
         );
