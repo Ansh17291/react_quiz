@@ -37,7 +37,7 @@ export interface QuizAssignment {
   quizId: string;
   studentIds: string[]; // 'ALL' or array of user IDs
   deadline: string; // ISO string
-  timeLimit?: number; // Optional time limit in minutes
+  timeLimit?: number; // Optional time limit in minutes 
   numQuestionsToAssign: number; // How many questions to pull from the pool
   isLive: boolean; // Flag for live quizzes
 }
@@ -73,6 +73,7 @@ export interface Resource {
 }
 
 export interface DiscussionReply {
+  _id: string;
   id: string;
   authorId: string;
   content: string;

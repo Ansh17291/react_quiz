@@ -1,4 +1,13 @@
+import { useState, useRef, useEffect } from "react";
+import { useParams, useSearchParams } from "react-router-dom";
+import { AnimatedWrapper } from "../../components/shared/AnimatedComponents";
+import { useToast, Card, Button } from "../../components/ui";
+import { useAppContext } from "../../context/AppContext";
 import { api } from "../../services/api";
+import type { DiscussionPost } from "../../types";
+import io from "socket.io-client";
+
+const socket = io("http://localhost:8080/discussion");
 
 const DiscussionPostPage = () => {
   const { postId } = useParams<{ postId: string }>();
@@ -31,12 +40,28 @@ const DiscussionPostPage = () => {
     fetchPost();
   }, [postId]);
 
+  useEffect(() => {
+    socket.on("newReply", (newReply) => {
+      setPost((prevPost) => {
+        if (!prevPost) return null;
+
+        return { ...prevPost, replies: [...prevPost.replies, newReply] };
+      });
+    });
+
+    return () => {
+      socket.off("newReply");
+    };
+  }, []);
+
   const handleAddReply = async (e: React.FormEvent) => {
     e.preventDefault();
+
     if (!replyContent.trim()) {
       addToast("Reply cannot be empty.", "error");
       return;
     }
+
     const newReply = {
       authorId: (currentUser!._id || currentUser!.id) as string,
       content: replyContent,
@@ -45,10 +70,7 @@ const DiscussionPostPage = () => {
     };
 
     // Optimistically update UI
-    setPost((prevPost) => {
-      if (!prevPost) return null;
-      return { ...prevPost, replies: [...prevPost.replies, newReply as any] };
-    });
+
     setReplyContent("");
     addToast("Reply added!", "success");
 
@@ -59,7 +81,7 @@ const DiscussionPostPage = () => {
         content: newReply.content,
       });
       // Re-fetch post to get server-generated _id and accurate createdAt
-      await fetchPost();
+      // await fetchPost();
     } catch (error) {
       console.error("Failed to add reply:", error);
       addToast("Failed to add reply. Please try again.", "error");
@@ -68,7 +90,9 @@ const DiscussionPostPage = () => {
         if (!prevPost) return null;
         return {
           ...prevPost,
-          replies: prevPost.replies.filter((reply) => reply._id !== newReply._id),
+          replies: prevPost.replies.filter(
+            (reply) => reply._id !== newReply._id
+          ),
         };
       });
     }
@@ -190,3 +214,6 @@ const DiscussionPostPage = () => {
 };
 
 export default DiscussionPostPage;
+function fetchPost() {
+  throw new Error("Function not implemented.");
+}

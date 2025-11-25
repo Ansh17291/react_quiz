@@ -26,26 +26,33 @@ export const Chatbot = ({
     if (!input.trim() || isLoading) return;
 
     const userMessage: ChatMessage = { role: "user", parts: [{ text: input }] };
-    const currentHistory = [...history, userMessage];
-    setHistory(currentHistory);
+    setHistory((prev) => [...prev, userMessage]);
     setInput("");
     setIsLoading(true);
 
     try {
       const stream = await sendMessageToBot(input);
       let modelResponse = "";
-      setHistory((prev) => [...prev, { role: "model", parts: [{ text: "" }] }]);
+      let modelMessageAdded = false;
 
       for await (const chunk of stream) {
         modelResponse += chunk.text;
-        setHistory((prev) => {
-          const newHistory = [...prev];
-          newHistory[newHistory.length - 1] = {
-            role: "model",
-            parts: [{ text: modelResponse }],
-          };
-          return newHistory;
-        });
+        if (!modelMessageAdded) {
+          setHistory((prev) => [
+            ...prev,
+            { role: "model", parts: [{ text: modelResponse }] },
+          ]);
+          modelMessageAdded = true;
+        } else {
+          setHistory((prev) => {
+            const newHistory = [...prev];
+            newHistory[newHistory.length - 1] = {
+              role: "model",
+              parts: [{ text: modelResponse }],
+            };
+            return newHistory;
+          });
+        }
       }
     } catch (error) {
       console.error(error);

@@ -73,6 +73,12 @@ const QuizAssignment = require("./Model/QuizAssignment");
 // --- Socket.IO Namespaces ---
 const leaderboardNamespace = io.of("/leaderboard");
 
+const discussionNamespace = io.of("/discussion");
+
+function notifyNewReply(reply) {
+  discussionNamespace.emit("newReply", reply);
+}
+
 async function getLeaderboardData() {
   const topUsers = await User.find({ role: "STUDENT" })
     .sort({ points: -1 })
@@ -267,6 +273,8 @@ app.post("/api/discussions/reply", async (req, res) => {
 
     mainPost.replies.push(createReply._id);
     await mainPost.save();
+
+    notifyNewReply(createReply);
 
     res.json({ message: "Reply added to discussion post", reply: createReply });
   } catch (err) {
