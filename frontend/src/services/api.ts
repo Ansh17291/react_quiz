@@ -1,6 +1,6 @@
 import type { Quiz, QuizResult, Resource, DiscussionPost } from '../types';
 
-export const BASE = "http://localhost:8080"
+export const BASE = ""
 
 async function request(path: string, opts: RequestInit = {}) {
     const res = await fetch(`${BASE}${path}`, {

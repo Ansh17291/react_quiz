@@ -23,7 +23,7 @@ const LeaderboardPage = () => {
   const [overallLeaderboard, setOverallLeaderboard] = useState<any[]>([]);
 
   useEffect(() => {
-    const socket = io("http://localhost:8080/leaderboard");
+    const socket = io({path:"/leaderboard"});
 
     socket.on("connect", () => {
       console.log("Connected to leaderboard websocket");

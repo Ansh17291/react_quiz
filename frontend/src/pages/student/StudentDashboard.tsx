@@ -104,7 +104,7 @@ const StudentDashboard = () => {
   useEffect(() => {
     if (!currentUserId) return;
 
-    const socket = io("http://localhost:8080/assignments");
+    const socket = io({path:"/assignments"});
 
     socket.on("connect", () => {
       console.log("Connected to assignments websocket");
