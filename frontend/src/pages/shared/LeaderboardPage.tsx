@@ -23,7 +23,7 @@ const LeaderboardPage = () => {
   const [overallLeaderboard, setOverallLeaderboard] = useState<any[]>([]);
 
   useEffect(() => {
-    const socket = io({path:"/leaderboard"});
+    const socket = io("/leaderboard");
 
     socket.on("connect", () => {
       console.log("Connected to leaderboard websocket");
@@ -148,7 +148,10 @@ const LeaderboardPage = () => {
                           className="underline text-primary-300 hover:text-primary-200"
                           onClick={() => {
                             if (student._id) {
-                              addToast(`Viewing ${student.name}'s profile`, "info");
+                              addToast(
+                                `Viewing ${student.name}'s profile`,
+                                "info"
+                              );
                               navigate(`/student/${student._id}`);
                             }
                           }}
@@ -176,11 +179,13 @@ const LeaderboardPage = () => {
                   className="w-full p-2 mb-4 border rounded-md bg-slate-700 border-slate-600"
                 >
                   <option value="">-- Select a Quiz --</option>
-                  {quizzes.filter((q) => !q.isPractice).map((q) => (
-                    <option key={q._id} value={q._id}>
-                      {q.title}
-                    </option>
-                  ))}
+                  {quizzes
+                    .filter((q) => !q.isPractice)
+                    .map((q) => (
+                      <option key={q._id} value={q._id}>
+                        {q.title}
+                      </option>
+                    ))}
                 </select>
 
                 {selectedQuizId && (

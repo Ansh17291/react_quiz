@@ -7,7 +7,7 @@ import { api } from "../../services/api";
 import type { DiscussionPost } from "../../types";
 import io from "socket.io-client";
 
-const socket = io({path:"/discussion"});
+const socket = io("/discussion");
 
 const DiscussionPostPage = () => {
   const { postId } = useParams<{ postId: string }>();
