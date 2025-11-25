@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useRef } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAppContext } from "../../context/AppContext";
 import {
@@ -7,6 +7,7 @@ import {
 } from "../../components/shared/AnimatedComponents";
 import { Card, Tabs, useToast } from "../../components/ui";
 import { TrophyIcon } from "../../components/Icons";
+import io from "socket.io-client";
 
 const LeaderboardPage = () => {
   const { addToast } = useToast();
@@ -19,29 +20,39 @@ const LeaderboardPage = () => {
   );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  const students = useRef<any>([]);
-  const overallLeaderboard = useRef<any>([]);
+  const [overallLeaderboard, setOverallLeaderboard] = useState<any[]>([]);
 
   useEffect(() => {
-    try {
-      setLoading(true);
-      setError(null);
-      // Use context users (already have derived points) and re-evaluate on changes
-      const studentUsers = (users || []).filter((u) => u.role === "STUDENT");
-      // Clone before sort to avoid mutating context refs
-      const sorted = [...studentUsers].sort(
-        (a, b) => (b.points || 0) - (a.points || 0)
-      );
-      students.current = studentUsers;
-      overallLeaderboard.current = sorted;
-    } catch (err) {
-      console.error("Failed to prepare leaderboard:", err);
-      setError("Failed to load leaderboard data. Please try again later.");
-    } finally {
+    const socket = io("http://localhost:8080/leaderboard");
+
+    socket.on("connect", () => {
+      console.log("Connected to leaderboard websocket");
       setLoading(false);
-    }
-  }, [users, results]);
+    });
+
+    socket.on("initialData", (data) => {
+      setOverallLeaderboard(data);
+    });
+
+    socket.on("update", (data) => {
+      addToast("Leaderboard has been updated!", "info");
+      setOverallLeaderboard(data);
+    });
+
+    socket.on("disconnect", () => {
+      console.log("Disconnected from leaderboard websocket");
+    });
+
+    socket.on("connect_error", (err) => {
+      console.error("Leaderboard websocket connection error:", err);
+      setError("Failed to connect to real-time leaderboard updates.");
+      setLoading(false);
+    });
+
+    return () => {
+      socket.disconnect();
+    };
+  }, [addToast]);
 
   const rankBadges = ["🥇", "🥈", "🥉"];
 
@@ -63,6 +74,7 @@ const LeaderboardPage = () => {
 
   const quizLeaderboard = useMemo(() => {
     if (!selectedQuizId) return [];
+    const studentUsers = (users || []).filter((u) => u.role === "STUDENT");
     return results
       .filter((r) => r.quizId === selectedQuizId)
       .sort((a, b) => {
@@ -73,7 +85,7 @@ const LeaderboardPage = () => {
         return (a.timeTaken || 0) - (b.timeTaken || 0);
       })
       .map((result) => {
-        const user = students.current.find(
+        const user = studentUsers.find(
           (u) => (u._id || (u as any).id) === result.userId
         );
         return {
@@ -83,8 +95,7 @@ const LeaderboardPage = () => {
         };
       })
       .map((entry, index) => ({ ...entry, rank: index + 1 }));
-  }, [results, students.current, selectedQuizId]);
-
+  }, [results, users, selectedQuizId]);
   const selectedQuiz = quizzes.find((q) => q._id === selectedQuizId);
 
   const handleQuizSelection = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -120,7 +131,7 @@ const LeaderboardPage = () => {
                   Overall Student Rankings (by Points)
                 </h3>
                 <StaggeredList className="space-y-2">
-                  {overallLeaderboard.current.map((student, index) => (
+                  {overallLeaderboard.map((student, index) => (
                     <div
                       key={student._id}
                       className="flex justify-between items-center p-3 bg-slate-700/50 rounded-lg hover:bg-slate-700 transition-transform duration-150 ease-out hover:scale-[1.01]"

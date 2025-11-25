@@ -16,10 +16,13 @@ import {
   BookOpenIcon,
 } from "../../components/Icons";
 import { api } from "../../services/api";
+import io from "socket.io-client";
+import { useToast } from "../../components/ui";
 
 const StudentDashboard = () => {
   const { currentUser } = useAppContext();
   const navigate = useNavigate();
+  const { addToast } = useToast();
 
   const [, setAssignments] = React.useState<any[]>([]);
   const [studentAssignments, setStudentAssignments] = React.useState<any[]>([]);
@@ -97,6 +100,55 @@ const StudentDashboard = () => {
       fetchData();
     }
   }, [currentUserId]);
+
+  useEffect(() => {
+    if (!currentUserId) return;
+
+    const socket = io("http://localhost:8080/assignments");
+
+    socket.on("connect", () => {
+      console.log("Connected to assignments websocket");
+    });
+
+    socket.on("newAssignment", async (newAssignment) => {
+      if (newAssignment.studentIds.includes(currentUserId)) {
+        setStudentAssignments((prev) => {
+          const assignmentExists = prev.some(
+            (assignment) => assignment._id === newAssignment._id
+          );
+          if (!assignmentExists) {
+            addToast("A new quiz has been assigned to you!", "info");
+            return [...prev, newAssignment];
+          }
+          return prev;
+        });
+        // Fetch quizzes again to get the new quiz title
+        const quizzesRes = await api.getQuizzes();
+        setQuizzes(quizzesRes || []);
+      }
+    });
+
+    socket.on("deassignQuiz", ({ quizId, studentIds }) => {
+      if (studentIds.includes(currentUserId)) {
+        addToast("A quiz has been unassigned.", "warning");
+        setStudentAssignments((prev) =>
+          prev.filter((assignment) => assignment.quizId !== quizId)
+        );
+      }
+    });
+
+    socket.on("disconnect", () => {
+      console.log("Disconnected from assignments websocket");
+    });
+
+    socket.on("connect_error", (err) => {
+      console.error("Assignments websocket connection error:", err);
+    });
+
+    return () => {
+      socket.disconnect();
+    };
+  }, [currentUserId, addToast]);
 
   return (
     <AnimatedWrapper className="space-y-8">

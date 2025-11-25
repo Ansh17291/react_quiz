@@ -36,10 +36,6 @@ interface AppContextType {
   addPost: (
     postData: Omit<DiscussionPost, "id" | "createdAt" | "replies">
   ) => void;
-  addReply: (
-    postId: string,
-    replyData: { authorId: string; content: string }
-  ) => void;
 }
 
 const AppContext = React.createContext<AppContextType | null>(null);
@@ -278,64 +274,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
       });
   };
 
-  const addReply = async (
-    postId: string,
-    replyData: { authorId: string; content: string }
-  ) => {
-    const optimistic = {
-      authorId: replyData.authorId,
-      content: replyData.content,
-      createdAt: new Date().toISOString(),
-      id: postId,
-    };
-    console.log(postId);
-
-    const data = await axios.post("/discussions/reply", {
-      optimistic: {
-        postId,
-        ...optimistic,
-      },
-    });
-
-    console.log(data.data);
-
-    // Optimistic UI update
-    // setDiscussionPosts((prev) =>
-    //   prev.map((p) =>
-    //     p.id === postId || p._id === postId
-    //       ? { ...p, replies: [...p.replies, optimistic] }
-    //       : p
-    //   )
-    // );
-
-    api
-      .addReply(postId, replyData as any)
-      .then((created: any) => {
-        // Replace optimistic reply with server one
-        setDiscussionPosts((prev) =>
-          prev.map((p) => {
-            if (!(p.id === postId || p._id === postId)) return p;
-            const replies = p.replies.slice();
-            const idx = replies.findIndex((r: any) => r.id === optimistic.id);
-            const serverReply = {
-              id: created._id || created.id,
-              _id: created._id || created.id,
-              authorId: created.authorId,
-              content: created.content,
-              createdAt: created.createdAt,
-            };
-            if (idx >= 0) replies[idx] = serverReply;
-            else replies.push(serverReply);
-            return { ...p, replies };
-          })
-        );
-      })
-      .catch((err) => {
-        console.error("Failed to add reply:", err);
-        // keep optimistic reply; optionally mark unsynced
-      });
-  };
-
   useEffect(() => {
     if (currentUser) {
       const userId = currentUser._id || currentUser.id;
@@ -377,7 +315,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
       removeUser,
       updateUserPoints,
       addPost,
-      addReply,
     }),
     [
       currentUser,

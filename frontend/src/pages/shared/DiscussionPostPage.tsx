@@ -1,33 +1,77 @@
-import React, { useEffect, useRef, useState } from "react";
-import { useParams, useSearchParams } from "react-router-dom";
-import { useAppContext } from "../../context/AppContext";
-import { useToast } from "../../components/ui";
-import { AnimatedWrapper } from "../../components/shared/AnimatedComponents";
-import { Button, Card } from "../../components/ui";
+import { api } from "../../services/api";
 
 const DiscussionPostPage = () => {
   const { postId } = useParams<{ postId: string }>();
-  const { discussionPosts, users, currentUser, addReply } = useAppContext();
+  const { users, currentUser } = useAppContext();
   const [searchParams] = useSearchParams();
   const { addToast } = useToast();
-  const post = discussionPosts.find((p) => (p._id || p.id) === postId);
+  const [post, setPost] = useState<DiscussionPost | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const author = users.find((u) => (u._id || u.id) === post?.authorId);
 
   const [replyContent, setReplyContent] = useState("");
   const replyTextareaRef = useRef<HTMLTextAreaElement | null>(null);
 
-  const handleAddReply = (e: React.FormEvent) => {
+  useEffect(() => {
+    const fetchPost = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+        const fetchedPost = await api.getPost(postId!);
+        console.log("Fetched post:", fetchedPost);
+        setPost(fetchedPost);
+      } catch (error: any) {
+        console.error("Failed to fetch post:", error);
+        setError(error.message || "Failed to load post.");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchPost();
+  }, [postId]);
+
+  const handleAddReply = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!replyContent.trim()) {
       addToast("Reply cannot be empty.", "error");
       return;
     }
-    addReply(postId!, {
+    const newReply = {
       authorId: (currentUser!._id || currentUser!.id) as string,
       content: replyContent,
+      createdAt: new Date().toISOString(), // Optimistic creation date
+      _id: `temp-${Date.now()}`, // Temporary ID for optimistic UI
+    };
+
+    // Optimistically update UI
+    setPost((prevPost) => {
+      if (!prevPost) return null;
+      return { ...prevPost, replies: [...prevPost.replies, newReply as any] };
     });
     setReplyContent("");
     addToast("Reply added!", "success");
+
+    try {
+      // Send to API
+      await api.addReply(postId!, {
+        authorId: (currentUser!._id || currentUser!.id) as string,
+        content: newReply.content,
+      });
+      // Re-fetch post to get server-generated _id and accurate createdAt
+      await fetchPost();
+    } catch (error) {
+      console.error("Failed to add reply:", error);
+      addToast("Failed to add reply. Please try again.", "error");
+      // Revert optimistic update on error
+      setPost((prevPost) => {
+        if (!prevPost) return null;
+        return {
+          ...prevPost,
+          replies: prevPost.replies.filter((reply) => reply._id !== newReply._id),
+        };
+      });
+    }
   };
 
   // If navigated with ?reply=1, focus the reply box
@@ -41,7 +85,41 @@ const DiscussionPostPage = () => {
     }
   }, [searchParams]);
 
-  if (!post || !author) return <div>Post not found.</div>;
+  if (isLoading) {
+    return (
+      <AnimatedWrapper className="max-w-4xl mx-auto space-y-6">
+        <Card>
+          <div className="flex justify-center items-center p-8">
+            <div className="w-8 h-8 border-4 border-primary-500 border-t-transparent rounded-full animate-spin"></div>
+          </div>
+        </Card>
+      </AnimatedWrapper>
+    );
+  }
+
+  if (error) {
+    return (
+      <AnimatedWrapper className="max-w-4xl mx-auto space-y-6">
+        <Card>
+          <div className="p-4 text-red-400 bg-red-500/20 rounded-lg">
+            {error}
+          </div>
+        </Card>
+      </AnimatedWrapper>
+    );
+  }
+
+  if (!post || !author) {
+    return (
+      <AnimatedWrapper className="max-w-4xl mx-auto space-y-6">
+        <Card>
+          <div className="p-4 text-yellow-400 bg-yellow-500/20 rounded-lg">
+            Post not found or author data missing.
+          </div>
+        </Card>
+      </AnimatedWrapper>
+    );
+  }
 
   return (
     <AnimatedWrapper className="max-w-4xl mx-auto space-y-6">

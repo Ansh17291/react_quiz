@@ -39,10 +39,9 @@ export const api = {
     getResources: () => request('/api/resources'),
     addResource: (r: Partial<Resource>) => request('/resources', { method: 'POST', body: JSON.stringify(r) }),
     getPosts: () => request('/api/posts'),
-    getPost: (id: string) => request(`/posts/${id}`),
-    // Backend creates posts at /discussions
-    addPost: (p: Partial<DiscussionPost>) => request('/discussions', { method: 'POST', body: JSON.stringify(p) }),
-    addReply: (postId: string, reply: any) => request(`/posts/${postId}/replies`, { method: 'POST', body: JSON.stringify(reply) }),
+    getPost: (id: string) => request(`/api/posts/${id}`),
+    addPost: (p: Partial<DiscussionPost>) => request('/api/discussions', { method: 'POST', body: JSON.stringify(p) }),
+    addReply: (postId: string, reply: any) => request(`/api/discussions/reply`, { method: 'POST', body: JSON.stringify({ postId, optimistic: reply }) }),
     updateUserPassword: (userId: string, password: string) => request(`/users/${userId}/password`, { method: 'PUT', body: JSON.stringify({ password }) }),
 };
 

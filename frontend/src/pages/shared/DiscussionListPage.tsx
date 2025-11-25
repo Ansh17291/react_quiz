@@ -69,7 +69,7 @@ const DiscussionListPage = () => {
 
     fetchUsers();
   }, []);
-
+  
   const handleCreatePost = async (e: React.FormEvent) => {
     e.preventDefault();
 

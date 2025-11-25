@@ -9,18 +9,19 @@ const multer = require("multer");
 const XLSX = require("xlsx");
 const mammoth = require("mammoth");
 const JSZip = require("jszip");
-const io = require("socket.io")(3000, {
-  cors: {
-    origin: "*",
-  },
-});
-
-const aes256 = require("aes256");
+const http = require("http");
+const socketIo = require("socket.io");
 const { encryptString, decryptString } = require("./utils/crypto");
 
 const encryptKey = process.env.ENCRYPT_KEY || "my passphrase";
 
 const app = express();
+const server = http.createServer(app);
+const io = socketIo(server, {
+  cors: {
+    origin: "*",
+  },
+});
 
 const PORT = process.env.PORT || 8080;
 
@@ -69,6 +70,42 @@ const Question = require("./Model/Question");
 const QuizResult = require("./Model/QuizResult");
 const QuizAssignment = require("./Model/QuizAssignment");
 
+// --- Socket.IO Namespaces ---
+const leaderboardNamespace = io.of("/leaderboard");
+
+async function getLeaderboardData() {
+  const topUsers = await User.find({ role: "STUDENT" })
+    .sort({ points: -1 })
+    .limit(10)
+    .lean();
+  return topUsers;
+}
+
+async function updateLeaderboard() {
+  const leaderboardData = await getLeaderboardData();
+  leaderboardNamespace.emit("update", leaderboardData);
+}
+
+leaderboardNamespace.on("connection", async (socket) => {
+  console.log("Client connected to leaderboard");
+  const leaderboardData = await getLeaderboardData();
+  socket.emit("initialData", leaderboardData);
+});
+
+const assignmentsNamespace = io.of("/assignments");
+
+function notifyNewAssignment(assignment) {
+  assignmentsNamespace.emit("newAssignment", assignment);
+}
+
+function notifyDeassignQuiz(quizId, studentIds) {
+  assignmentsNamespace.emit("deassignQuiz", { quizId, studentIds });
+}
+
+assignmentsNamespace.on("connection", (socket) => {
+  console.log("Client connected to assignments");
+});
+
 // Health
 app.get("/api/health", (req, res) => res.json({ status: "ok" }));
 
@@ -76,6 +113,22 @@ app.get("/api/health", (req, res) => res.json({ status: "ok" }));
 app.get("/api/users", async (req, res) => {
   const users = await User.find().lean();
   res.json(users);
+});
+
+// Leaderboard route
+app.get("/api/leaderboard", async (req, res) => {
+  try {
+    const leaderboardData = await getLeaderboardData();
+    res.json(leaderboardData);
+  } catch (error) {
+    console.error("Failed to fetch leaderboard data:", error);
+    res.status(500).json({ error: "Failed to fetch leaderboard data" });
+  }
+});
+
+app.post("/api/leaderboard/update", async (req, res) => {
+  await updateLeaderboard();
+  res.status(200).json({ message: "Leaderboard update triggered" });
 });
 
 app.get("/api/assignment", async (req, res) => {
@@ -108,6 +161,7 @@ app.post("/api/assignments", async (req, res) => {
       numQuestionsToAssign,
       isLive,
     });
+    notifyNewAssignment(assignment);
     res.status(201).json(assignment);
   } catch (e) {
     console.error(e);
@@ -135,6 +189,10 @@ app.put("/api/assignments/by-quiz/:quizId", async (req, res) => {
     if (!Array.isArray(studentIds)) {
       return res.status(400).json({ error: "studentIds array is required" });
     }
+
+    const existingAssignment = await QuizAssignment.findOne({ quizId });
+    const oldStudentIds = existingAssignment ? existingAssignment.studentIds.map(id => id.toString()) : [];
+
     const update = {
       quizId,
       studentIds,
@@ -147,6 +205,20 @@ app.put("/api/assignments/by-quiz/:quizId", async (req, res) => {
       update,
       { new: true, upsert: true }
     );
+
+    // Notify de-assigned students
+    const deassignedStudentIds = oldStudentIds.filter(id => !studentIds.includes(id));
+    if (deassignedStudentIds.length > 0) {
+      notifyDeassignQuiz(quizId, deassignedStudentIds);
+    }
+
+    // Notify newly assigned students
+    const newStudentIds = studentIds.filter(id => !oldStudentIds.includes(id));
+    if (newStudentIds.length > 0) {
+      const newAssignmentData = { ...assignment.toObject(), studentIds: newStudentIds };
+      notifyNewAssignment(newAssignmentData);
+    }
+
     res.json(assignment);
   } catch (e) {
     console.error(e);
@@ -168,7 +240,7 @@ app.get("/api/discussions", async (req, res) => {
 });
 
 app.post("/api/discussions", async (req, res) => {
-  const discussion = DiscussionPost.create({
+  const discussion = await DiscussionPost.create({
     title: req.body.title,
     content: req.body.content,
     authorId: req.body.authorId,
@@ -195,8 +267,6 @@ app.post("/api/discussions/reply", async (req, res) => {
 
     mainPost.replies.push(createReply._id);
     await mainPost.save();
-
-    console.log(createReply, "\n\n\n", mainPost);
 
     res.json({ message: "Reply added to discussion post", reply: createReply });
   } catch (err) {
@@ -245,6 +315,17 @@ app.post("/api/quizzes/:quizID/submit", async (req, res) => {
       timeTaken: resultData.timeTaken,
       submittedAt: resultData.submittedAt,
     });
+
+    // Find the user and add points
+    const user = await User.findById(resultData.userId);
+    if (user) {
+      user.points = (user.points || 0) + resultData.score;
+      await user.save();
+    }
+
+    //
+    await updateLeaderboard();
+
     res.json(results);
   } catch (error) {
     console.error("Failed to submit quiz result:", error);
@@ -395,6 +476,21 @@ app.get("/api/posts", async (req, res) => {
   res.json(posts);
 });
 
+app.get("/api/posts/:id", async (req, res) => {
+  try {
+    const post = await DiscussionPost.findById(req.params.id)
+      .populate("replies")
+      .lean();
+    if (!post) {
+      return res.status(404).json({ error: "Discussion post not found" });
+    }
+    res.json(post);
+  } catch (error) {
+    console.error("Failed to fetch discussion post:", error);
+    res.status(500).json({ error: "Failed to fetch discussion post" });
+  }
+});
+
 // Quizzes - return with populated questions so clients see full question pool
 app.get("/api/quizzes", async (req, res) => {
   try {
@@ -525,6 +621,8 @@ app.post("/api/create-quiz", async (req, res) => {
       numQuestionsToAssign: req.body.assignment.numQuestionsToAssign,
     });
 
+    notifyNewAssignment(newAssignment);
+
     res.status(201).json({ quiz: newQuiz, assignment: newAssignment });
   } catch (error) {
     console.error("Error creating quiz:", error);
@@ -558,15 +656,6 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: "Internal Server Error" });
 });
 
-io.on("connection", (socket) => {
-  console.log("Client connected:", socket.id);
-
-  socket.on("hi", (msg) => {
-    console.log("From client:", msg);
-    io.emit("message", msg); // broadcast back
-  });
-});
-
-app.listen(PORT, () => {
+server.listen(PORT, () => {
   console.log(`Listening on PORT: ${PORT}`);
 });

@@ -38,6 +38,19 @@ const AdminQuizzesPage: React.FC = () => {
     load();
   }, []);
 
+  useEffect(() => {
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && isAssignOpen) {
+        setIsAssignOpen(false);
+      }
+    };
+
+    document.addEventListener("keydown", handleEscape);
+    return () => {
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, [isAssignOpen]);
+
   const createDoc = async (quiz: any) => {
     const pdf = new jsPDF();
     const pageWidth = pdf.internal.pageSize.getWidth();
