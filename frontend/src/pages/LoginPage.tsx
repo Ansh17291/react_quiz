@@ -46,7 +46,7 @@ const LoginPage = () => {
       return;
     }
 
-    const user = await axios.post(`${BASE}/user/signup`, {
+    const user = await axios.post(`${BASE}/api/user/signup`, {
       username: name,
       password: password,
     });

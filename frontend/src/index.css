@@ -1,1 +1,13 @@
 @import "tailwindcss";
+
+/* Hide the top header/nav when any element (document) is in fullscreen mode */
+:fullscreen header,
+:-webkit-full-screen header {
+	display: none !important;
+}
+
+/* Optional: hide other sticky nav elements that use the 'sticky top-0' pattern */
+:fullscreen .sticky,
+:-webkit-full-screen .sticky {
+	display: none !important;
+}

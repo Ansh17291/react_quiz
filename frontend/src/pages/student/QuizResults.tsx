@@ -218,7 +218,10 @@ const QuizResults = () => {
         <div className="flex flex-wrap gap-x-6 gap-y-2 items-center text-lg">
           <p>
             <strong>Score:</strong>{" "}
-            <span className="text-primary-400 font-bold">{result.score}%</span>
+            <span className="text-primary-400 font-bold">
+              {result.answers.filter((a: any) => a.isCorrect).length}/{result.answers.length} 
+            </span>{" "}
+            <strong> Percentage : ({result.score}%)</strong>
           </p>
           <p>
             <strong>Time Taken:</strong> {Math.floor(result.timeTaken / 60)}m{" "}
