@@ -8,7 +8,6 @@ import { api } from "../../services/api";
 
 const StudentProfilePage = () => {
   const { studentId } = useParams<{ studentId: string }>();
-  console.log(studentId);
   useAppContext();
 
   const [student, setStudent] = useState<any>(null);

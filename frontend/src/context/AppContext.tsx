@@ -82,9 +82,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
       allQuizzes.filter((q) => q.isPractice).map((q) => q._id || q.id)
     );
     return (allResults || [])
-      .filter(
-        (r) => r.userId === userId && !practiceQuizIds.has(r.quizId)
-      )
+      .filter((r) => r.userId === userId && !practiceQuizIds.has(r.quizId))
       .reduce((sum, r) => sum + (r.score || 0), 0);
   };
 
@@ -169,11 +167,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
   }, []);
 
   const login = async (user: any) => {
-    console.log("Login user:", user);
-
     // Normalize the user object to ensure both id and _id exist
     const normalizedUser = normalizeUser(user.user || user);
-    console.log("Normalized user:", normalizedUser);
 
     setCurrentUser(normalizedUser);
 
@@ -193,7 +188,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
       pool: quiz.questionPool,
       assignment,
     });
-    console.log(quizData);
     const newQuiz = quizData.data.quiz;
     const newAssignment = quizData.data.assignment;
 
@@ -205,9 +199,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const addResult = async (result: QuizResult) => {
     try {
-      console.log("Adding result for quiz:", result.quizId);
       const newResult = await api.submitQuizResult(result.quizId, result);
-      console.log("Result submitted:", newResult);
       // Optimistically update results; points will be recalculated in the effect below
       setResults((prev) => [...prev, newResult || result]);
     } catch (error) {
@@ -246,7 +238,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
     const data = await axios.post(`${BASE}/delete`, {
       userId,
     });
-    console.log("User removed:", data);
     // Normalize the returned users
     const normalizedUsers = data.data.map((u: any) => normalizeUser(u));
     setUsers(normalizedUsers);

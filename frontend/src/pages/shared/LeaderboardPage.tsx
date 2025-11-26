@@ -26,7 +26,6 @@ const LeaderboardPage = () => {
     const socket = io("/leaderboard");
 
     socket.on("connect", () => {
-      console.log("Connected to leaderboard websocket");
       setLoading(false);
     });
 

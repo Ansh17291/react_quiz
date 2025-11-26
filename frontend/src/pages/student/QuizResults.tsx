@@ -75,9 +75,6 @@ const QuizResults = () => {
           return;
         }
 
-        // console.log("Quiz data:", quizData);
-        // console.log("Result data:", resultData);
-
         setQuiz(quizData);
         setResult(resultData);
       } catch (err) {
@@ -219,7 +216,8 @@ const QuizResults = () => {
           <p>
             <strong>Score:</strong>{" "}
             <span className="text-primary-400 font-bold">
-              {result.answers.filter((a: any) => a.isCorrect).length}/{result.answers.length} 
+              {result.answers.filter((a: any) => a.isCorrect).length}/
+              {result.answers.length}
             </span>{" "}
             <strong> Percentage : ({result.score}%)</strong>
           </p>
@@ -274,14 +272,6 @@ const QuizResults = () => {
               const isCorrect = studentAnswer.isCorrect;
               const selectedOption = studentAnswer.selectedOptionIndex;
               const correctOption = question.correctAnswerIndex;
-
-              // console.log("Rendering question:", {
-              //   questionId: question.id,
-              //   text: question.questionText,
-              //   selectedOption,
-              //   correctOption,
-              //   isCorrect,
-              // });
 
               return (
                 <div key={question.id} className="p-4 rounded-lg bg-slate-800">

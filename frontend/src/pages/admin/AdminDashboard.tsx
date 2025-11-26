@@ -67,7 +67,6 @@ const AdminDashboard = () => {
   useEffect(() => {
     const fetchData = async () => {
       const data = await api.getUsers();
-      console.log(data);
       students.current = (data || []).filter((u) => u.role === "STUDENT");
       teachers.current = (data || []).filter((u) => u.role === "TEACHER");
     };

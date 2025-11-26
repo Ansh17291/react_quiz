@@ -51,8 +51,6 @@ const LoginPage = () => {
       password: password,
     });
 
-    console.log(user.data);
-
     if (user.data?.message === "User exists") {
       addToast("Another user exists with the same username", "error");
       return;

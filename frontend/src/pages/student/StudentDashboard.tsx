@@ -83,9 +83,6 @@ const StudentDashboard = () => {
         const studentAssignmentsData = (assignmentsRes || []).filter((a: any) =>
           a.studentIds.includes(currentUserId)
         );
-        console.log("Current user ID:", currentUserId);
-        console.log("Assignments before filter:", assignmentsRes.data);
-        console.log("Filtered assignments:", studentAssignmentsData);
 
         setStudentAssignments(studentAssignmentsData);
       } catch (err) {
@@ -174,8 +171,6 @@ const StudentDashboard = () => {
               <StaggeredList className="space-y-3">
                 {studentAssignments.map((assignment) => {
                   const quiz = quizzes.find((q) => q._id === assignment.quizId);
-                  console.log("Assignment:", assignment);
-                  console.log("Found quiz:", quiz);
                   const isTaken = studentResults.some(
                     (r) => r.quizId === quiz?._id
                   );
@@ -263,8 +258,6 @@ const StudentDashboard = () => {
             <div className="flex flex-col gap-3">
               <Button
                 onClick={() => {
-                  console.log("Current user:", currentUser);
-                  console.log("User ID:", currentUserId);
                   // Use the correct ID field
                   navigate(`/student/${currentUserId}`);
                 }}

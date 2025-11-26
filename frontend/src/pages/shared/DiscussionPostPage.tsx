@@ -28,7 +28,7 @@ const DiscussionPostPage = () => {
         setIsLoading(true);
         setError(null);
         const fetchedPost = await api.getPost(postId!);
-        console.log("Fetched post:", fetchedPost);
+
         setPost(fetchedPost);
       } catch (error: any) {
         console.error("Failed to fetch post:", error);
