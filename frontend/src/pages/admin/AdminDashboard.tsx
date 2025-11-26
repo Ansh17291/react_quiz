@@ -213,7 +213,7 @@ const AdminDashboard = () => {
       const form = new FormData();
       form.append("file", file);
       form.append("title", file.name);
-      const resp = await fetch(`${BASE}/resources/upload`, {
+      const resp = await fetch(`${BASE}/api/resources/upload`, {
         method: "POST",
         body: form,
       });
