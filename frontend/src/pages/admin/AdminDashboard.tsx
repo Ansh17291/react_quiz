@@ -342,7 +342,7 @@ const AdminDashboard = () => {
 
     setIsAddingTeacher(true);
     try {
-      const response = await fetch(`${BASE}/user/teacher-signup`, {
+      const response = await fetch(`${BASE}/api/user/teacher-signup`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
