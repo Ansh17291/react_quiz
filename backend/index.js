@@ -69,6 +69,9 @@ const Quiz = require("./Model/Quiz");
 const Question = require("./Model/Question");
 const QuizResult = require("./Model/QuizResult");
 const QuizAssignment = require("./Model/QuizAssignment");
+const Poll = require("./Model/Poll");
+const PollSession = require("./Model/PollSession");
+const PollAssignment = require("./Model/PollAssignment");
 
 // --- Socket.IO Namespaces ---
 const leaderboardNamespace = io.of("/leaderboard");
@@ -416,6 +419,20 @@ function signToken(user) {
   );
 }
 
+// simple JWT auth middleware
+function authenticateJWT(req, res, next) {
+  const auth = req.headers && req.headers.authorization;
+  if (!auth || !auth.startsWith('Bearer ')) return res.status(401).json({ error: 'Unauthorized' });
+  const token = auth.split(' ')[1];
+  try {
+    const payload = jwt.verify(token, JWT_SECRET);
+    req.user = payload;
+    return next();
+  } catch (e) {
+    return res.status(401).json({ error: 'Invalid token' });
+  }
+}
+
 app.post("/api/user/student-login", async (req, res) => {
   const { name, password } = req.body;
 
@@ -515,6 +532,216 @@ app.get("/api/quizzes", async (req, res) => {
   } catch (e) {
     console.error(e);
     res.status(500).json({ error: "Failed to load quizzes" });
+  }
+});
+
+// --- Polls ---
+app.post("/api/polls", authenticateJWT, async (req, res) => {
+  try {
+    const { title, questions } = req.body || {};
+    if (!questions || !Array.isArray(questions) || questions.length === 0)
+      return res.status(400).json({ error: "questions are required" });
+    // only TEACHER or ADMIN can create polls
+    if (!req.user || !["TEACHER", "ADMIN"].includes(req.user.role)) {
+      return res.status(403).json({ error: "Forbidden" });
+    }
+    const createdBy = req.user.id || req.user._id;
+    const poll = await Poll.create({ title, questions, createdBy });
+    res.status(201).json(poll);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: "Failed to create poll" });
+  }
+});
+
+app.get("/api/polls", async (req, res) => {
+  try {
+    const polls = await Poll.find().lean();
+    res.json(polls);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: "Failed to fetch polls" });
+  }
+});
+
+// Start a poll session (create counts and expiration)
+app.post("/api/polls/:id/start", authenticateJWT, async (req, res) => {
+  try {
+    const pollId = req.params.id;
+    const { timeLimitSeconds } = req.body || {};
+    const poll = await Poll.findById(pollId).lean();
+    if (!poll) return res.status(404).json({ error: "Poll not found" });
+    if (!req.user || !['TEACHER', 'ADMIN'].includes(req.user.role)) {
+      return res.status(403).json({ error: 'Forbidden' });
+    }
+
+    // End any existing active sessions for this poll
+    await PollSession.updateMany({ pollId, active: true }, { active: false });
+
+    // initialize votes for first question
+    const firstQuestion = (poll.questions || [])[0] || { options: [] };
+    const votes = (firstQuestion.options || []).map(() => 0);
+    const currentQuestionIndex = 0;
+    const startedAt = new Date();
+    const expiresAt = timeLimitSeconds ? new Date(Date.now() + timeLimitSeconds * 1000) : null;
+    const session = await PollSession.create({ pollId, votes, startedAt, expiresAt, active: true, currentQuestionIndex });
+    res.status(201).json(session);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: "Failed to start poll session" });
+  }
+});
+
+// Assign poll to students (teacher/admin only)
+app.post('/api/polls/:id/assign', authenticateJWT, async (req, res) => {
+  try {
+    if (!req.user || !['TEACHER', 'ADMIN'].includes(req.user.role)) {
+      return res.status(403).json({ error: 'Forbidden' });
+    }
+    const pollId = req.params.id;
+    const { studentIds, deadline, timeLimit, isLive } = req.body || {};
+    if (!Array.isArray(studentIds) || studentIds.length === 0) {
+      return res.status(400).json({ error: 'studentIds array required' });
+    }
+    const assignment = await PollAssignment.create({ pollId, studentIds, deadline, timeLimit, isLive });
+    res.status(201).json(assignment);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: 'Failed to assign poll' });
+  }
+});
+
+app.get('/api/polls/assignments/by-poll/:pollId', async (req, res) => {
+  try {
+    const pollId = req.params.pollId;
+    const assignment = await PollAssignment.findOne({ pollId }).lean();
+    res.json(assignment || null);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: 'Failed to fetch poll assignment' });
+  }
+});
+
+// Get polls assigned to current user
+app.get('/api/polls/assigned', authenticateJWT, async (req, res) => {
+  try {
+    const userId = req.user && (req.user.id || req.user._id);
+    if (!userId) return res.status(400).json({ error: 'Invalid user' });
+    const assignments = await PollAssignment.find({ studentIds: userId }).lean();
+    const pollIds = assignments.map(a => a.pollId);
+    const polls = await Poll.find({ _id: { $in: pollIds } }).lean();
+    // merge assignment info into poll
+    const merged = polls.map(p => {
+      const assign = assignments.find(a => String(a.pollId) === String(p._id));
+      return { ...p, assignment: assign };
+    });
+    res.json(merged);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: 'Failed to fetch assigned polls' });
+  }
+});
+// Vote on active poll session
+app.post("/api/polls/:id/vote", async (req, res) => {
+  try {
+    const pollId = req.params.id;
+    const { optionIndex, userId } = req.body || {};
+    const session = await PollSession.findOne({ pollId, active: true }).sort({ startedAt: -1 });
+    if (!session) return res.status(400).json({ error: "No active poll session" });
+    if (session.expiresAt && new Date() > session.expiresAt) {
+      session.active = false;
+      await session.save();
+      return res.status(400).json({ error: "Poll session expired" });
+    }
+    // ensure optionIndex is valid for current question
+    if (typeof optionIndex !== 'number' || optionIndex < 0 || optionIndex >= session.votes.length) {
+      return res.status(400).json({ error: "Invalid optionIndex" });
+    }
+    // Prevent duplicate votes by same userId (optional)
+    if (userId && session.voters && session.voters.includes(userId)) {
+      return res.status(400).json({ error: "User already voted" });
+    }
+
+    session.votes[optionIndex] = (session.votes[optionIndex] || 0) + 1;
+    if (userId) session.voters.push(userId);
+    await session.save();
+    res.json({ success: true, session });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: "Failed to record vote" });
+  }
+});
+
+// Get current session for a poll
+app.get("/api/polls/:id/session", async (req, res) => {
+  try {
+    const pollId = req.params.id;
+    // Get the most recent session (active or inactive) to show results
+    const session = await PollSession.findOne({ pollId }).sort({ startedAt: -1 }).lean();
+    if (!session) return res.json(null);
+    const now = new Date();
+    const timeLeft = session.expiresAt ? Math.max(0, new Date(session.expiresAt) - now) : null;
+    res.json({ ...session, timeLeft });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: "Failed to fetch poll session" });
+  }
+});
+
+// Advance to next question in active poll session
+app.post('/api/polls/:id/next', authenticateJWT, async (req, res) => {
+  try {
+    if (!req.user || !['TEACHER', 'ADMIN'].includes(req.user.role)) return res.status(403).json({ error: 'Forbidden' });
+    const pollId = req.params.id;
+    const { timeLimitSeconds } = req.body || {};
+    const poll = await Poll.findById(pollId).lean();
+    if (!poll) return res.status(404).json({ error: 'Poll not found' });
+    const session = await PollSession.findOne({ pollId, active: true }).sort({ startedAt: -1 });
+    if (!session) return res.status(400).json({ error: 'No active session to advance' });
+
+    const nextIndex = (session.currentQuestionIndex || 0) + 1;
+    if (nextIndex >= (poll.questions || []).length) {
+      // end session
+      session.active = false;
+      await session.save();
+      return res.json({ message: 'Poll session ended' });
+    }
+
+    // reset votes for next question
+    const nextOptions = (poll.questions || [])[nextIndex].options || [];
+    session.currentQuestionIndex = nextIndex;
+    session.votes = nextOptions.map(() => 0);
+    session.voters = [];
+    session.startedAt = new Date();
+    session.expiresAt = timeLimitSeconds ? new Date(Date.now() + timeLimitSeconds * 1000) : null;
+    await session.save();
+    res.json(session);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: 'Failed to advance poll' });
+  }
+});
+
+// Delete a poll
+app.delete('/api/polls/:id', authenticateJWT, async (req, res) => {
+  try {
+    if (!req.user || !['TEACHER', 'ADMIN'].includes(req.user.role)) return res.status(403).json({ error: 'Forbidden' });
+    const pollId = req.params.id;
+    
+    // Delete the poll
+    const poll = await Poll.findByIdAndDelete(pollId);
+    if (!poll) return res.status(404).json({ error: 'Poll not found' });
+    
+    // Delete associated sessions
+    await PollSession.deleteMany({ pollId });
+    
+    // Delete associated assignments
+    await PollAssignment.deleteMany({ pollId });
+    
+    res.json({ message: 'Poll deleted successfully' });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: 'Failed to delete poll' });
   }
 });
 

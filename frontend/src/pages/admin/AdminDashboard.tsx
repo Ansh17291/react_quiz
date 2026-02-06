@@ -383,16 +383,23 @@ const AdminDashboard = () => {
     <AnimatedWrapper className="space-y-8">
       <div className="flex items-center justify-between">
         <h2 className="text-3xl font-bold">Admin Dashboard</h2>
-        <Button onClick={() => navigate("/admin/quizzes")} variant="secondary">
-          View All Quizzes
-        </Button>
+        <div className="flex items-center gap-3">
+          <Button onClick={() => navigate("/admin/quizzes")} variant="secondary">
+            View All Quizzes
+          </Button>
+          <Button onClick={() => navigate("/admin/polls")} variant="secondary">
+            Manage Polls
+          </Button>
+        </div>
       </div>
       <div>
-        <Tabs
-          tabs={["Create Quiz", "Manage Students", "Manage Teachers"]}
-          activeTab={activeTab}
-          setActiveTab={setActiveTab}
-        />
+        <div className="flex items-center justify-between">
+          <Tabs
+            tabs={["Create Quiz", "Manage Students", "Manage Teachers"]}
+            activeTab={activeTab}
+            setActiveTab={setActiveTab}
+          />
+        </div>
         <div className="mt-6">
           {activeTab === "Create Quiz" && (
             <div className="space-y-8">

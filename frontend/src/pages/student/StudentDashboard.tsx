@@ -26,6 +26,7 @@ const StudentDashboard = () => {
 
   const [, setAssignments] = React.useState<any[]>([]);
   const [studentAssignments, setStudentAssignments] = React.useState<any[]>([]);
+  const [assignedPolls, setAssignedPolls] = React.useState<any[]>([]);
   const [users, setUsers] = React.useState<any[]>([]);
   const [results, setResults] = React.useState<any[]>([]);
   const [quizzes, setQuizzes] = React.useState<any[]>([]);
@@ -42,9 +43,9 @@ const StudentDashboard = () => {
   const avgScore = React.useMemo(() => {
     return studentResults.length > 0
       ? Math.round(
-          studentResults.reduce((acc, r) => acc + r.score, 0) /
-            studentResults.length
-        )
+        studentResults.reduce((acc, r) => acc + r.score, 0) /
+        studentResults.length
+      )
       : "N/A";
   }, [studentResults]);
 
@@ -78,6 +79,12 @@ const StudentDashboard = () => {
         setQuizzes(quizzesRes || []);
         setResults(resultsRes || []);
         setAssignments(assignmentsRes || []);
+        try {
+          const pollsAssigned = await api.getAssignedPolls();
+          setAssignedPolls(pollsAssigned || []);
+        } catch (e) {
+          // ignore
+        }
 
         // Filter assignments for the current student
         const studentAssignmentsData = (assignmentsRes || []).filter((a: any) =>
@@ -223,6 +230,26 @@ const StudentDashboard = () => {
               <p className="text-slate-400 text-center py-4">
                 No quizzes assigned yet. Check back later!
               </p>
+            )}
+          </Card>
+          <Card>
+            <h3 className="text-xl font-semibold mb-4">Assigned Polls</h3>
+            {assignedPolls.length > 0 ? (
+              <div className="space-y-3">
+                {assignedPolls.map((p) => (
+                  <div key={p._id || p.id} className="p-4 bg-slate-700/50 rounded-lg flex justify-between items-center">
+                    <div>
+                      <div className="font-semibold">{p.title || `Poll`}</div>
+                      <div className="text-sm text-slate-400">{(p.questions || []).map((q: any) => q.questionText).slice(0, 2).join(' • ')}{(p.questions || []).length > 2 ? ' ...' : ''}</div>
+                    </div>
+                    <div>
+                      <Button onClick={() => navigate(`/poll/${p._id || p.id}`)}>Open Poll</Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-slate-400">No polls assigned.</p>
             )}
           </Card>
           <Card>

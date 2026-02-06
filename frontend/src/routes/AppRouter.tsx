@@ -18,6 +18,8 @@ import AdminQuizzesPage from "../pages/admin/AdminQuizzesPage";
 import TeacherDashboard from "../pages/teacher/TeacherDashboard";
 import QuizTaker from "../pages/student/QuizTaker";
 import QuizResults from "../pages/student/QuizResults";
+import PollTaker from "../pages/shared/PollTaker";
+import PollsAdmin from "../pages/admin/PollsAdmin";
 import LeaderboardPage from "../pages/shared/LeaderboardPage";
 import ResourcesPage from "../pages/shared/ResourcesPage";
 import StudentListPage from "../pages/admin/StudentListPage";
@@ -96,6 +98,8 @@ const AppRouter = () => {
             <Route path="/admin/history" element={<AdminHistoryPage />} />
             <Route path="/teacher" element={<TeacherDashboard />} />
             <Route path="/quiz/:assignmentId" element={<QuizTaker />} />
+            <Route path="/poll/:pollId" element={<PollTaker />} />
+            <Route path="/admin/polls" element={<PollsAdmin />} />
             <Route path="/results/:quizId" element={<QuizResults />} />
             <Route path="/leaderboard" element={<LeaderboardPage />} />
             <Route path="/leaderboard/:quizId" element={<LeaderboardPage />} />

@@ -1,10 +1,23 @@
 import type { Quiz, QuizResult, Resource, DiscussionPost } from '../types';
 
-export const BASE = ""
+export const BASE = "http://localhost:8080";
 
 async function request(path: string, opts: RequestInit = {}) {
+    // attach Authorization header if token is stored in localStorage currentUser
+    const stored = localStorage.getItem('currentUser');
+    let token: string | null = null;
+    try {
+        const parsed = stored ? JSON.parse(stored) : null;
+        token = parsed?.token || null;
+    } catch (e) {
+        token = null;
+    }
+
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
     const res = await fetch(`${BASE}${path}`, {
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         ...opts,
     });
     if (!res.ok) {
@@ -28,21 +41,33 @@ export const api = {
     },
     getUsers: () => request('/api/users'),
     getQuizzes: () => request('/api/quizzes'),
-    getQuiz: (id: string) => request(`/quizzes/${id}`),
-    addQuiz: (quiz: Partial<Quiz>) => request('/quizzes', { method: 'POST', body: JSON.stringify(quiz) }),
+    getQuiz: (id: string) => request(`/api/quizzes/${id}`),
+    addQuiz: (quiz: Partial<Quiz>) => request('/api/quizzes', { method: 'POST', body: JSON.stringify(quiz) }),
     submitQuizResult: (quizId: string, payload: Partial<QuizResult>) => request(`/api/quizzes/${quizId}/submit`, { method: 'POST', body: JSON.stringify(payload) }),
     getResults: () => request('/api/results').catch(() => []),
     getAssignments: () => request('/api/assignment').catch(() => []),
-    createAssignment: (payload: { quizId: string; studentIds: string[]; deadline?: string; timeLimit?: number; numQuestionsToAssign?: number; isLive?: boolean; }) => request('/assignments', { method: 'POST', body: JSON.stringify(payload) }),
+    createAssignment: (payload: { quizId: string; studentIds: string[]; deadline?: string; timeLimit?: number; numQuestionsToAssign?: number; isLive?: boolean; }) => request('/api/assignments', { method: 'POST', body: JSON.stringify(payload) }),
     getAssignmentByQuiz: (quizId: string) => request(`/api/assignments/by-quiz/${quizId}`),
     updateAssignmentByQuiz: (quizId: string, payload: { studentIds: string[]; deadline?: string; timeLimit?: number; isLive?: boolean; }) => request(`/api/assignments/by-quiz/${quizId}`, { method: 'PUT', body: JSON.stringify(payload) }),
     getResources: () => request('/api/resources'),
-    addResource: (r: Partial<Resource>) => request('/resources', { method: 'POST', body: JSON.stringify(r) }),
+    addResource: (r: Partial<Resource>) => request('/api/resources', { method: 'POST', body: JSON.stringify(r) }),
     getPosts: () => request('/api/posts'),
     getPost: (id: string) => request(`/api/posts/${id}`),
     addPost: (p: Partial<DiscussionPost>) => request('/api/discussions', { method: 'POST', body: JSON.stringify(p) }),
     addReply: (postId: string, reply: any) => request(`/api/discussions/reply`, { method: 'POST', body: JSON.stringify({ postId, optimistic: reply }) }),
-    updateUserPassword: (userId: string, password: string) => request(`/users/${userId}/password`, { method: 'PUT', body: JSON.stringify({ password }) }),
+    updateUserPassword: (userId: string, password: string) => request(`/api/users/${userId}/password`, { method: 'PUT', body: JSON.stringify({ password }) }),
+    // Polls
+    getPolls: () => request('/api/polls'),
+    createPoll: (payload: any) => request('/api/polls', { method: 'POST', body: JSON.stringify(payload) }),
+    startPoll: (pollId: string, timeLimitSeconds?: number) => request(`/api/polls/${pollId}/start`, { method: 'POST', body: JSON.stringify({ timeLimitSeconds }) }),
+    votePoll: (pollId: string, optionIndex: number, userId?: string) => request(`/api/polls/${pollId}/vote`, { method: 'POST', body: JSON.stringify({ optionIndex, userId }) }),
+    getPollSession: (pollId: string) => request(`/api/polls/${pollId}/session`),
+    advancePoll: (pollId: string, timeLimitSeconds?: number) => request(`/api/polls/${pollId}/next`, { method: 'POST', body: JSON.stringify({ timeLimitSeconds }) }),
+    // poll assignments
+    assignPoll: (pollId: string, payload: { studentIds: string[]; deadline?: string; timeLimit?: number; isLive?: boolean }) => request(`/api/polls/${pollId}/assign`, { method: 'POST', body: JSON.stringify(payload) }),
+    getPollAssignment: (pollId: string) => request(`/api/polls/assignments/by-poll/${pollId}`),
+    getAssignedPolls: () => request('/api/polls/assigned'),
+    deletePoll: (pollId: string) => request(`/api/polls/${pollId}`, { method: 'DELETE' }),
 };
 
 export default api;

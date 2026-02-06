@@ -49,11 +49,11 @@ const TeacherDashboard = () => {
   const [manualQuestions, setManualQuestions] = useState<any>([
     { questionText: "", options: ["", "", "", ""], correctAnswerIndex: 0 },
   ]);
-  
+
   const students = useRef<any[]>([]);
   const [editingUserId, setEditingUserId] = useState<string | null>(null);
   const [newPassword, setNewPassword] = useState<string>("");
-  
+
   // Add Student Modal State
   const [isAddStudentModalOpen, setIsAddStudentModalOpen] = useState(false);
   const [newStudentName, setNewStudentName] = useState("");
@@ -163,7 +163,7 @@ const TeacherDashboard = () => {
       const avgScore =
         studentResults.length > 0
           ? studentResults.reduce((acc, r) => acc + r.score, 0) /
-            studentResults.length
+          studentResults.length
           : 0;
       return {
         name: student.name,
@@ -179,13 +179,16 @@ const TeacherDashboard = () => {
     <AnimatedWrapper className="space-y-8">
       <div className="flex items-center justify-between">
         <h2 className="text-3xl font-bold">Teacher Dashboard</h2>
-        <div className="flex justify-between">
+        <div className="flex items-center gap-6">
           <Button
             onClick={() => navigate("/admin/quizzes")}
             variant="secondary"
-            className="mr-16"
+            className="mr-2"
           >
             View All Quizzes
+          </Button>
+          <Button onClick={() => navigate("/admin/polls")} variant="secondary" className="mr-2">
+            Manage Polls
           </Button>
           <Tabs
             tabs={["Overview", "Manage Students", "Create Quiz", "Upload Resources"]}
@@ -210,9 +213,8 @@ const TeacherDashboard = () => {
                 >
                   <span className="font-medium flex items-center gap-3">
                     <span
-                      className={`text-xl w-6 text-center ${
-                        index < 3 ? "" : "text-slate-400"
-                      }`}
+                      className={`text-xl w-6 text-center ${index < 3 ? "" : "text-slate-400"
+                        }`}
                     >
                       {rankBadges[index] || index + 1}
                     </span>
@@ -260,7 +262,7 @@ const TeacherDashboard = () => {
           </Card>
         </div>
       )}
-      
+
       {activeTab === "Manage Students" && (
         <Card>
           <div className="flex justify-between items-center mb-4">

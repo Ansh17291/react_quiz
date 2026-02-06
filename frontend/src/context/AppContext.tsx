@@ -167,8 +167,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
   }, []);
 
   const login = async (user: any) => {
-    // Normalize the user object to ensure both id and _id exist
-    const normalizedUser = normalizeUser(user.user || user);
+    // Accept either { user, token } or raw user object
+    const payload = user.user ? user : { user };
+    const normalizedUser = normalizeUser(payload.user || payload);
+    // attach token if present
+    if (user.token) {
+      (normalizedUser as any).token = user.token;
+    } else if (payload.token) {
+      (normalizedUser as any).token = payload.token;
+    }
 
     setCurrentUser(normalizedUser);
 
