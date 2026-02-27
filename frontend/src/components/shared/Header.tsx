@@ -56,7 +56,7 @@ export const Header = () => {
                         {[
                             { to: '/leaderboard', label: 'Leaderboard' },
                             ...(currentUser.role === Roles.STUDENT ? [{ to: '/discussions', label: 'Discussions' }] : []),
-                            { to: '/classrooms', label: 'Classrooms' },
+                            ...(currentUser.role !== Roles.ADMIN ? [{ to: '/classrooms', label: 'Classrooms' }] : []),
                             { to: '/resources', label: 'Resources' },
                         ].map(({ to, label }) => (
                             <Link

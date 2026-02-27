@@ -8,6 +8,7 @@ import {
 import { Card, Tabs, useToast } from "../../components/ui";
 import { TrophyIcon } from "../../components/Icons";
 import io from "socket.io-client";
+import { BASE } from "../../services/api";
 
 const LeaderboardPage = () => {
   const { addToast } = useToast();
@@ -23,7 +24,7 @@ const LeaderboardPage = () => {
   const [overallLeaderboard, setOverallLeaderboard] = useState<any[]>([]);
 
   useEffect(() => {
-    const socket = io("/leaderboard");
+    const socket = io(`${BASE}/leaderboard`);
 
     socket.on("connect", () => {
       setLoading(false);
@@ -268,12 +269,12 @@ const LeaderboardPage = () => {
                               </div>
                               <TrophyIcon
                                 className={`w-5 h-5 ${rank === 1
-                                    ? "text-yellow-400"
-                                    : rank === 2
-                                      ? "text-slate-300"
-                                      : rank === 3
-                                        ? "text-amber-600"
-                                        : "hidden"
+                                  ? "text-yellow-400"
+                                  : rank === 2
+                                    ? "text-slate-300"
+                                    : rank === 3
+                                      ? "text-amber-600"
+                                      : "hidden"
                                   }`}
                               />
                             </div>

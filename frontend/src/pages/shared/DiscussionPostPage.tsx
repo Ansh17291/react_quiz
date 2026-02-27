@@ -3,11 +3,11 @@ import { useParams, useSearchParams } from "react-router-dom";
 import { AnimatedWrapper } from "../../components/shared/AnimatedComponents";
 import { useToast, Card, Button } from "../../components/ui";
 import { useAppContext } from "../../context/AppContext";
-import { api } from "../../services/api";
+import { api, BASE } from "../../services/api";
 import type { DiscussionPost } from "../../types";
 import io from "socket.io-client";
 
-const socket = io("/discussion");
+const socket = io(`${BASE}/discussion`);
 
 const DiscussionPostPage = () => {
   const { postId } = useParams<{ postId: string }>();

@@ -14,7 +14,7 @@ import {
   TrophyIcon,
   ChartBarIcon,
 } from "../../components/Icons";
-import { api } from "../../services/api";
+import { api, BASE } from "../../services/api";
 import io from "socket.io-client";
 import { useToast } from "../../components/ui";
 
@@ -101,8 +101,7 @@ const StudentDashboard = () => {
 
   useEffect(() => {
     if (!currentUserId) return;
-
-    const socket = io("/assignments");
+    const socket = io(`${BASE}/assignments`);
 
     socket.on("connect", () => {
       console.log("Connected to assignments websocket");

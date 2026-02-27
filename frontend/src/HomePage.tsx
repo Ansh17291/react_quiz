@@ -84,8 +84,9 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { io } from "socket.io-client";
 import { useTheme } from "./context/ThemeContext";
+import { BASE } from "./services/api";
 
-const socket = io();
+const socket = io(BASE);
 
 const SunIcon = () => (
   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -335,9 +336,8 @@ const HomePage = () => {
               The Future of Learning,
               <br />
               <span className="bg-gradient-to-r from-violet-500 via-purple-400 to-pink-400 bg-clip-text text-transparent animate-pulse">
-                Personalized
+                Personalized.
               </span>
-              <span style={{ color: 'var(--accent)' }}>.</span>
             </h2>
 
             <p className="mt-6 max-w-2xl mx-auto text-xl leading-relaxed" style={{ color: 'var(--text-muted)' }}>

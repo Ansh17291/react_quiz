@@ -120,8 +120,12 @@ const AppRouter = () => {
               path="/discussions/:postId"
               element={<DiscussionPostPage />}
             />
-            <Route path="/classrooms" element={<ClassroomsPage />} />
-            <Route path="/classrooms/:id" element={<ClassroomDetailPage />} />
+            {currentUser.role !== Roles.ADMIN && (
+              <>
+                <Route path="/classrooms" element={<ClassroomsPage />} />
+                <Route path="/classrooms/:id" element={<ClassroomDetailPage />} />
+              </>
+            )}
             <Route path="*" element={<Navigate to={userDashboardPath} />} />
           </Routes>
         </WithChatbot>
