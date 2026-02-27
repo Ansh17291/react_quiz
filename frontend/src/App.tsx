@@ -1,7 +1,7 @@
-// import React from 'react';
 import { ToastProvider } from './components/ui';
 import AppRouter from './routes/AppRouter';
 import { AppProvider } from './context/AppContext';
+import { ThemeProvider } from './context/ThemeContext';
 
 const App = () => (
     <AppProvider>
@@ -10,9 +10,12 @@ const App = () => (
 );
 
 const AppContainer = () => (
-    <ToastProvider>
-        <App />
-    </ToastProvider>
+    <ThemeProvider>
+        <ToastProvider>
+            <App />
+        </ToastProvider>
+    </ThemeProvider>
 );
 
 export default AppContainer;
+

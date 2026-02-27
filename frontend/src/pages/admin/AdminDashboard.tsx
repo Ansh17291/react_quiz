@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useMemo } from "react";
 import { useAppContext } from "../../context/AppContext";
 import { useToast } from "../../components/ui";
 import type { Quiz } from "../../types";
@@ -10,6 +10,7 @@ import {
   AnimatedWrapper,
   StaggeredList,
 } from "../../components/shared/AnimatedComponents";
+import MultiSelectDropdown from "../../components/shared/MultiSelectDropdown";
 import { Button, Card, Modal, Spinner, Tabs } from "../../components/ui";
 import { BASE } from "../../services/api";
 import {
@@ -67,11 +68,13 @@ const AdminDashboard = () => {
   useEffect(() => {
     const fetchData = async () => {
       const data = await api.getUsers();
-      students.current = (data || []).filter((u) => u.role === "STUDENT");
-      teachers.current = (data || []).filter((u) => u.role === "TEACHER");
+      students.current = (data || []).filter((u: any) => u.role === "STUDENT");
+      teachers.current = (data || []).filter((u: any) => u.role === "TEACHER");
     };
     fetchData();
   }, []);
+
+  const studentOptions = useMemo(() => students.current.map((s: any) => ({ id: s._id || s.id, name: s.name })), [students.current]);
 
   const openAssignModal = (quiz: Quiz) => {
     setQuizToAssign(quiz);
@@ -409,19 +412,20 @@ const AdminDashboard = () => {
                   Generate Quiz with AI
                 </h3>
                 <div className="space-y-4">
-                  <p className="text-slate-300">
+                  <p style={{ color: 'var(--text-muted)' }}>
                     Paste text, or upload a .txt file. The AI will generate a
                     quiz based on the content.
                   </p>
                   <textarea
                     value={quizText}
                     onChange={(e) => setQuizText(e.target.value)}
-                    className="w-full h-40 p-2 border rounded-md bg-slate-700 border-slate-600 focus:ring-primary-500 focus:border-primary-500"
+                    className="w-full h-40 p-2 border rounded-md focus:ring-primary-500 focus:border-primary-500 theme-transition custom-scrollbar"
+                    style={{ background: 'var(--surface-2)', borderColor: 'var(--border)', color: 'var(--text)' }}
                     placeholder="Paste the content for the quiz here..."
                   />
                   <div className="flex flex-col sm:flex-row gap-4 items-center">
                     <label className="block">
-                      <span className="text-gray-300">
+                      <span style={{ color: 'var(--text-muted)' }}>
                         Questions to generate:
                       </span>
                       <input
@@ -430,7 +434,8 @@ const AdminDashboard = () => {
                         onChange={(e) =>
                           setNumQuestions(Math.max(1, parseInt(e.target.value)))
                         }
-                        className="mt-1 block w-28 rounded-md border-slate-600 shadow-sm bg-slate-700 focus:border-primary-300 focus:ring focus:ring-primary-200 focus:ring-opacity-50"
+                        className="mt-1 block w-28 rounded-md shadow-sm focus:ring focus:ring-primary-200 focus:ring-opacity-50 theme-transition"
+                        style={{ background: 'var(--surface-2)', borderColor: 'var(--border)', color: 'var(--text)' }}
                       />
                     </label>
                     <div className="grow"></div>
@@ -491,20 +496,22 @@ const AdminDashboard = () => {
                     placeholder="Quiz Title"
                     value={manualTitle}
                     onChange={(e) => setManualTitle(e.target.value)}
-                    className="w-full p-2 border rounded-md bg-slate-700 border-slate-600"
+                    className="w-full p-2 border rounded-md theme-transition"
+                    style={{ background: 'var(--surface-2)', borderColor: 'var(--border)', color: 'var(--text)' }}
                   />
-                  <div className="grid md:grid-cols-3 gap-4 p-4 bg-slate-900/50 rounded-lg">
+                  <div className="grid md:grid-cols-3 gap-4 p-4 rounded-lg theme-transition" style={{ background: 'rgba(0,0,0,0.05)', border: '1px solid var(--border)' }}>
                     <label className="block">
-                      <span className="text-gray-300">Time Limit (mins)</span>
+                      <span style={{ color: 'var(--text-muted)' }}>Time Limit (mins)</span>
                       <input
                         type="number"
                         value={timeLimit}
                         onChange={(e) => setTimeLimit(parseInt(e.target.value))}
-                        className="mt-1 block w-full p-2 rounded-md bg-slate-700 border-slate-600"
+                        className="mt-1 block w-full p-2 rounded-md theme-transition"
+                        style={{ background: 'var(--surface-2)', borderColor: 'var(--border)', color: 'var(--text)' }}
                       />
                     </label>
                     <label className="block">
-                      <span className="text-gray-300">Questions to Assign</span>
+                      <span style={{ color: 'var(--text-muted)' }}>Questions to Assign</span>
                       <input
                         type="number"
                         min={0}
@@ -514,16 +521,18 @@ const AdminDashboard = () => {
                             Math.max(0, parseInt(e.target.value))
                           )
                         }
-                        className="mt-1 block w-full p-2 rounded-md bg-slate-700 border-slate-600"
+                        className="mt-1 block w-full p-2 rounded-md theme-transition"
+                        style={{ background: 'var(--surface-2)', borderColor: 'var(--border)', color: 'var(--text)' }}
                       />
                     </label>
                     <label className="block">
-                      <span className="text-gray-300">Total in Pool</span>
+                      <span style={{ color: 'var(--text-muted)' }}>Total in Pool</span>
                       <input
                         type="number"
                         value={manualQuestions.length}
                         readOnly
-                        className="mt-1 block w-full p-2 rounded-md bg-slate-800 border-slate-600 cursor-not-allowed"
+                        className="mt-1 block w-full p-2 rounded-md cursor-not-allowed theme-transition"
+                        style={{ background: 'var(--surface-3)', borderColor: 'var(--border)', color: 'var(--text)' }}
                       />
                     </label>
                   </div>
@@ -531,12 +540,13 @@ const AdminDashboard = () => {
                     {manualQuestions.map((q, qIndex) => (
                       <div
                         key={qIndex}
-                        className="p-4 bg-slate-800 border border-slate-700 rounded-lg space-y-3 relative"
+                        className="p-4 border rounded-lg space-y-3 relative theme-transition"
+                        style={{ background: 'var(--surface-3)', borderColor: 'var(--border)' }}
                       >
                         {manualQuestions.length > 1 && (
                           <button
                             onClick={() => removeManualQuestion(qIndex)}
-                            className="absolute top-2 right-2 text-slate-500 hover:text-red-400"
+                            className="absolute top-2 right-2 text-red-500 hover:text-red-600"
                           >
                             <XCircleIcon className="w-6 h-6" />
                           </button>
@@ -551,7 +561,8 @@ const AdminDashboard = () => {
                             )
                           }
                           placeholder={`Question ${qIndex + 1}`}
-                          className="w-full p-2 border rounded-md bg-slate-700 border-slate-600"
+                          className="w-full p-2 border rounded-md theme-transition custom-scrollbar"
+                          style={{ background: 'var(--surface-2)', borderColor: 'var(--border)', color: 'var(--text)' }}
                         />
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                           {q.options.map((opt, optIndex) => (
@@ -570,7 +581,8 @@ const AdminDashboard = () => {
                                     optIndex
                                   )
                                 }
-                                className="h-5 w-5 text-primary-600 bg-slate-700 border-slate-500 focus:ring-primary-500"
+                                className="h-5 w-5 text-primary-600 focus:ring-primary-500 focus:ring-offset-[var(--surface-3)] theme-transition"
+                                style={{ background: 'var(--surface-2)', borderColor: 'var(--border)' }}
                               />
                               <input
                                 type="text"
@@ -582,7 +594,8 @@ const AdminDashboard = () => {
                                     text: e.target.value,
                                   })
                                 }
-                                className="w-full p-2 border rounded-md bg-slate-700 border-slate-600"
+                                className="w-full p-2 border rounded-md theme-transition"
+                                style={{ background: 'var(--surface-2)', borderColor: 'var(--border)', color: 'var(--text)' }}
                               />
                             </div>
                           ))}
@@ -590,7 +603,7 @@ const AdminDashboard = () => {
                       </div>
                     ))}
                   </div>
-                  <div className="flex flex-wrap gap-4 pt-4 border-t border-slate-700">
+                  <div className="flex flex-wrap gap-4 pt-4 border-t theme-transition" style={{ borderColor: 'var(--border)' }}>
                     <Button onClick={addManualQuestion} variant="secondary">
                       <PlusCircleIcon className="w-5 h-5" />
                       Add Question
@@ -637,7 +650,7 @@ const AdminDashboard = () => {
                 <h3 className="text-xl font-semibold mb-4">
                   Upload Resource File
                 </h3>
-                <p className="text-slate-300 mb-2">
+                <p className="mb-2" style={{ color: 'var(--text-muted)' }}>
                   Upload Word/Excel/PPT/Text files to Resources for students to
                   download.
                 </p>
@@ -670,7 +683,8 @@ const AdminDashboard = () => {
                 {students.current.map((student) => (
                   <div
                     key={student._id}
-                    className="flex justify-between items-center p-3 bg-slate-700 rounded-lg"
+                    className="flex justify-between items-center p-3 rounded-lg theme-transition"
+                    style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}
                   >
                     <span>{student.name}</span>
                     <div className="flex items-center gap-2">
@@ -679,7 +693,8 @@ const AdminDashboard = () => {
                           <input
                             type="password"
                             placeholder="New password"
-                            className="p-2 rounded bg-slate-800 border border-slate-600"
+                            className="p-2 rounded border focus:outline-none focus:ring-2 focus:ring-[var(--accent)] theme-transition custom-scrollbar"
+                            style={{ background: 'var(--surface-3)', borderColor: 'var(--border)', color: 'var(--text)' }}
                             value={newPassword}
                             onChange={(e) => setNewPassword(e.target.value)}
                           />
@@ -746,7 +761,8 @@ const AdminDashboard = () => {
                 {teachers.current.map((teacher) => (
                   <div
                     key={teacher._id}
-                    className="flex justify-between items-center p-3 bg-slate-700 rounded-lg"
+                    className="flex justify-between items-center p-3 rounded-lg theme-transition"
+                    style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}
                   >
                     <span>{teacher.name}</span>
                     <div className="flex items-center gap-2">
@@ -817,41 +833,13 @@ const AdminDashboard = () => {
       >
         <div className="space-y-4">
           <div>
-            <h4 className="font-bold mb-2">Select Students</h4>
-            <div className="space-y-2 max-h-48 overflow-y-auto p-2 bg-slate-700 rounded-md">
-              <label className="flex items-center gap-2 p-2 hover:bg-slate-600 rounded cursor-pointer">
-                <input
-                  type="checkbox"
-                  onChange={(e) =>
-                    setSelectedStudents(
-                      e.target.checked ? students.current.map((s) => s._id) : []
-                    )
-                  }
-                  className="h-4 w-4 rounded"
-                />
-                Select All Students
-              </label>
-              {students.current.map((student) => (
-                <label
-                  key={student._id}
-                  className="flex items-center gap-2 p-2 hover:bg-slate-600 rounded cursor-pointer"
-                >
-                  <input
-                    type="checkbox"
-                    checked={selectedStudents.includes(student._id)}
-                    onChange={(e) => {
-                      setSelectedStudents((prev) =>
-                        e.target.checked
-                          ? [...prev, student._id]
-                          : prev.filter((_id) => _id !== student._id)
-                      );
-                    }}
-                    className="h-4 w-4 rounded"
-                  />
-                  {student.name}
-                </label>
-              ))}
-            </div>
+            <MultiSelectDropdown
+              options={studentOptions}
+              selectedIds={selectedStudents}
+              onSelect={setSelectedStudents}
+              placeholder="Choose students..."
+              label="Select Students"
+            />
           </div>
           {!isLiveQuiz && (
             <div>

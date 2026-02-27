@@ -1,9 +1,15 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { api } from "../../services/api";
 import type { Quiz } from "../../types";
-import { Button, Card, Modal, Spinner } from "../../components/ui";
-import { useToast } from "../../components/ui";
+import { Button, Card, Modal, Spinner, useToast } from "../../components/ui";
+import {
+  UserGroupIcon,
+  CalendarIcon,
+  DocumentDownloadIcon,
+  SparklesIcon,
+} from "../../components/Icons";
 import jsPDF from "jspdf";
+import MultiSelectDropdown from "../../components/shared/MultiSelectDropdown";
 
 const AdminQuizzesPage: React.FC = () => {
   const { addToast } = useToast();
@@ -21,6 +27,8 @@ const AdminQuizzesPage: React.FC = () => {
   const [timeLimit, setTimeLimit] = useState<number>(10);
   const [isLive, setIsLive] = useState<boolean>(false);
   const [submitting, setSubmitting] = useState(false);
+
+  const studentOptions = useMemo(() => students.map(s => ({ id: s._id || s.id, name: s.name })), [students]);
 
   useEffect(() => {
     const load = async () => {
@@ -206,8 +214,14 @@ const AdminQuizzesPage: React.FC = () => {
                     Questions in pool: {q.questionPool?.length || 0}
                   </p>
                 </div>
-                <Button onClick={() => openAssign(q)}>Assign</Button>
-                <Button onClick={() => createDoc(q)}>Create doc</Button>
+                <div className="flex gap-2">
+                  <Button variant="secondary" onClick={() => openAssign(q)} className="py-1 px-3 text-sm">
+                    <UserGroupIcon className="w-4 h-4" /> Assign
+                  </Button>
+                  <Button variant="primary" onClick={() => createDoc(q)} className="py-1 px-3 text-sm bg-slate-700 hover:bg-slate-600">
+                    <DocumentDownloadIcon className="w-4 h-4" /> PDF
+                  </Button>
+                </div>
               </div>
             </Card>
           ))}
@@ -226,92 +240,77 @@ const AdminQuizzesPage: React.FC = () => {
       >
         <div className="space-y-4">
           <div>
-            <h4 className="font-semibold mb-2">Select Students</h4>
-            <div className="space-y-2 max-h-56 overflow-y-auto p-2 bg-slate-800 rounded-md">
-              <label className="flex items-center gap-2 p-2 hover:bg-slate-700 rounded">
-                <input
-                  type="checkbox"
-                  checked={
-                    selectedStudentIds.length === students.length &&
-                    students.length > 0
-                  }
-                  onChange={async (e) => {
-                    const next = e.target.checked
-                      ? students.map((s) => s._id)
-                      : [];
-                    setSelectedStudentIds(next);
-                    try {
-                      await applyAssignment(next);
-                    } catch {}
-                  }}
-                />
-                Select All
-              </label>
-              {students.map((s) => (
-                <label
-                  key={s._id}
-                  className="flex items-center gap-2 p-2 hover:bg-slate-700 rounded"
-                >
-                  <input
-                    type="checkbox"
-                    checked={selectedStudentIds.includes(s._id)}
-                    onChange={async (e) => {
-                      setSelectedStudentIds((prev) => {
-                        const next = e.target.checked
-                          ? [...prev, s._id]
-                          : prev.filter((id) => id !== s._id);
-                        // fire and forget, we still await to show errors
-                        applyAssignment(next).catch(() => {});
-                        return next;
-                      });
-                    }}
-                  />
-                  {s.name}
-                </label>
-              ))}
+            <div className="space-y-3">
+              <MultiSelectDropdown
+                options={studentOptions}
+                selectedIds={selectedStudentIds}
+                onSelect={async (next) => {
+                  setSelectedStudentIds(next);
+                  try {
+                    await applyAssignment(next);
+                  } catch { }
+                }}
+                placeholder="Choose students..."
+                label="Assign Students"
+              />
             </div>
           </div>
+        </div>
 
-          <div className="grid md:grid-cols-3 gap-3">
-            <label className="block">
-              <span className="text-gray-300">Live quiz</span>
-              <input
-                type="checkbox"
-                className="ml-2"
-                checked={isLive}
-                onChange={(e) => setIsLive(e.target.checked)}
-              />
+        <div className="p-4 rounded-xl bg-slate-800/40 border border-slate-700/50 space-y-4">
+          <div className="flex flex-wrap gap-6 items-center">
+            <label className="flex items-center gap-3 cursor-pointer group">
+              <div className="relative">
+                <input
+                  type="checkbox"
+                  checked={isLive}
+                  onChange={(e) => setIsLive(e.target.checked)}
+                  className="sr-only"
+                />
+                <div className={`w-10 h-5 rounded-full transition-colors ${isLive ? 'bg-primary-500' : 'bg-slate-700'}`} />
+                <div className={`absolute top-1 left-1 w-3 h-3 bg-white rounded-full transition-transform ${isLive ? 'translate-x-5' : ''}`} />
+              </div>
+              <div className="flex flex-col">
+                <span className="text-sm font-semibold text-slate-200">Live Session</span>
+                <span className="text-[10px] text-slate-500">Enable real-time synchronization</span>
+              </div>
             </label>
+
             {!isLive && (
-              <label className="block">
-                <span className="text-gray-300">Deadline</span>
+              <div className="flex-1 min-w-[150px]">
+                <div className="flex items-center gap-2 text-xs font-semibold text-slate-400 mb-1.5 uppercase tracking-wider">
+                  <CalendarIcon className="w-3.5 h-3.5" /> Deadline
+                </div>
                 <input
                   type="date"
                   value={deadline}
                   onChange={(e) => setDeadline(e.target.value)}
-                  className="mt-1 block w-full p-2 rounded-md bg-slate-700 border-slate-600"
+                  className="w-full p-2 text-sm rounded-lg bg-slate-900/50 border border-slate-700 focus:border-primary-500 transition-colors text-slate-200"
                 />
-              </label>
+              </div>
             )}
-            <label className="block">
-              <span className="text-gray-300">Time limit (mins)</span>
+
+            <div className="flex-1 min-w-[150px]">
+              <div className="flex items-center gap-2 text-xs font-semibold text-slate-400 mb-1.5 uppercase tracking-wider">
+                <SparklesIcon className="w-3.5 h-3.5" /> Time Limit (mins)
+              </div>
               <input
                 type="number"
                 value={timeLimit}
                 onChange={(e) => setTimeLimit(parseInt(e.target.value) || 0)}
-                className="mt-1 block w-full p-2 rounded-md bg-slate-700 border-slate-600"
+                className="w-full p-2 text-sm rounded-lg bg-slate-900/50 border border-slate-700 focus:border-primary-500 transition-colors text-slate-200"
               />
-            </label>
+            </div>
           </div>
-
-          <Button
-            onClick={() => setIsAssignOpen(false)}
-            disabled={submitting}
-            className="w-full"
-          >
-            Close
-          </Button>
         </div>
+
+        <Button
+          onClick={() => setIsAssignOpen(false)}
+          disabled={submitting}
+          className="w-full"
+        >
+          Close
+        </Button>
       </Modal>
     </div>
   );

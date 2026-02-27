@@ -54,6 +54,7 @@ const normalizeUser = (user: any): User => ({
   name: user.name,
   role: user.role,
   points: user.points ?? 0,
+  token: user.token, // Preserve token if present
 });
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
@@ -192,7 +193,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
   ): Promise<{ newQuiz: Quiz; newAssignment: QuizAssignment }> => {
     const quizData = await axios.post(`${BASE}/api/create-quiz`, {
       quiz,
-      pool: quiz.questionPool,
+      pool: quiz.questionPool || [],
       assignment,
     });
     const newQuiz = quizData.data.quiz;
@@ -280,7 +281,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
         updatedCurrentUser &&
         updatedCurrentUser.points !== currentUser.points
       ) {
-        setCurrentUser(normalizeUser(updatedCurrentUser));
+        const normalized = normalizeUser(updatedCurrentUser);
+        // Explicitly preserve token from existing session
+        if (currentUser.token) {
+          normalized.token = currentUser.token;
+        }
+        setCurrentUser(normalized);
       }
     }
   }, [users, currentUser]);

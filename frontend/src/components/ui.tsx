@@ -1,10 +1,11 @@
 import React, { useState, createContext, useContext } from "react";
 import ReactDOM from "react-dom";
 
+// ─── Button ─────────────────────────────────────────────────────────────────
 type ButtonProps<C extends React.ElementType> = {
   as?: C;
   children: React.ReactNode;
-  variant?: "primary" | "secondary" | "danger";
+  variant?: "primary" | "secondary" | "danger" | "ghost";
 } & React.ComponentPropsWithoutRef<C>;
 
 export const Button = <C extends React.ElementType = "button">({
@@ -16,22 +17,23 @@ export const Button = <C extends React.ElementType = "button">({
 }: ButtonProps<C>) => {
   const Component = as || "button";
 
-  const baseClasses =
-    "px-4 py-2 rounded-md font-semibold text-white transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2 transform active:scale-95 hover:scale-[1.03]";
+  const base =
+    "px-4 py-2 rounded-lg font-semibold transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2 active:scale-95 hover:scale-[1.02] text-sm";
 
-  const variantClasses = {
-    primary: "bg-primary-600 hover:bg-primary-700 focus:ring-primary-500",
-    secondary: "bg-slate-600 hover:bg-slate-700 focus:ring-slate-500",
-    danger: "bg-red-600 hover:bg-red-700 focus:ring-red-500",
+  const variants: Record<string, string> = {
+    primary:
+      "bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white shadow-[var(--shadow-sm)] focus:ring-[var(--accent)]",
+    secondary:
+      "bg-[var(--surface)] hover:bg-[var(--surface-2)] text-[var(--text)] border border-[var(--border)] focus:ring-[var(--accent)]",
+    danger:
+      "bg-red-600 hover:bg-red-700 text-white focus:ring-red-500",
+    ghost:
+      "bg-transparent hover:bg-[var(--surface-2)] text-[var(--text-muted)] hover:text-[var(--text)] focus:ring-[var(--accent)]",
   };
-
-  const combinedClassName = [baseClasses, variantClasses[variant], className]
-    .filter(Boolean)
-    .join(" ");
 
   return (
     <Component
-      className={`${combinedClassName} ${variantClasses[variant]}`}
+      className={`${base} ${variants[variant]} ${className ?? ""}`}
       {...props}
     >
       {children}
@@ -39,23 +41,27 @@ export const Button = <C extends React.ElementType = "button">({
   );
 };
 
-interface CardProps {
+// ─── Card ────────────────────────────────────────────────────────────────────
+interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
   children: React.ReactNode;
-  className?: string;
 }
 
-export const Card: React.FC<CardProps> = ({ children, className = "" }) => {
-  return (
-    <div className={`bg-slate-800 shadow-lg rounded-xl p-6 ${className}`}>
-      {children}
-    </div>
-  );
-};
-
-export const Spinner = () => (
-  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+export const Card: React.FC<CardProps> = ({ children, className = "", style, ...props }) => (
+  <div
+    className={`bg-[var(--surface)] border border-[var(--border)] shadow-[var(--shadow-sm)] rounded-xl p-6 theme-transition ${className}`}
+    style={style}
+    {...props}
+  >
+    {children}
+  </div>
 );
 
+// ─── Spinner ─────────────────────────────────────────────────────────────────
+export const Spinner = () => (
+  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-[var(--accent)]" />
+);
+
+// ─── Modal ───────────────────────────────────────────────────────────────────
 interface ModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -63,51 +69,38 @@ interface ModalProps {
   children: React.ReactNode;
 }
 
-export const Modal: React.FC<ModalProps> = ({
-  isOpen,
-  onClose,
-  title,
-  children,
-}) => {
+export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }) => {
   if (!isOpen) return null;
-
   return (
     <div
-      className="fixed inset-0 bg-black bg-opacity-70 z-50 flex justify-center items-center p-4"
+      className="fixed inset-0 z-50 flex justify-center items-start p-4"
       onClick={onClose}
     >
       <div
-        className="bg-slate-800 rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col"
+        className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl shadow-[var(--shadow-lg)] w-full max-w-2xl max-h-[80vh] flex flex-col overflow-hidden animate-in slide-in-from-top-4 duration-300 pointer-events-auto mt-16 theme-transition"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="p-6 border-b border-slate-700 sticky top-0 bg-slate-800">
+        <div className="p-6 border-b border-[var(--border)] sticky top-0 z-10 bg-[var(--surface)]">
           <div className="flex justify-between items-center">
-            <h2 className="text-2xl font-bold text-slate-100">{title}</h2>
+            <h2 className="text-xl font-bold text-[var(--text)]">{title}</h2>
             <button
               onClick={onClose}
-              className="text-slate-500 text-3xl leading-none hover:text-slate-200"
+              className="text-[var(--text-muted)] hover:text-[var(--text)] w-8 h-8 rounded-full flex items-center justify-center text-xl leading-none hover:bg-[var(--surface-2)] transition-colors"
             >
               &times;
             </button>
           </div>
         </div>
-        <div className="p-6 overflow-y-auto">{children}</div>
+        <div className="p-6 overflow-y-auto custom-scrollbar text-[var(--text)]">{children}</div>
       </div>
     </div>
   );
 };
 
-// --- Toast Functionality ---
+// ─── Toast ───────────────────────────────────────────────────────────────────
 type ToastType = "success" | "error" | "info";
-interface ToastMessage {
-  id: number;
-  message: string;
-  type: ToastType;
-}
-
-interface ToastContextType {
-  addToast: (message: string, type: ToastType) => void;
-}
+interface ToastMessage { id: number; message: string; type: ToastType; }
+interface ToastContextType { addToast: (message: string, type: ToastType) => void; }
 
 const ToastContext = createContext<ToastContextType | null>(null);
 
@@ -117,18 +110,14 @@ export const useToast = () => {
   return context;
 };
 
-export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({
-  children,
-}) => {
+export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
 
   const addToast = (message: string, type: ToastType) => {
-    const id = Date.now();
+    const id = Date.now() + Math.random();
     setToasts((prev) => [...prev, { id, message, type }]);
     setTimeout(() => {
-      setToasts((currentToasts) =>
-        currentToasts.filter((toast) => toast.id !== id)
-      );
+      setToasts((cur) => cur.filter((t) => t.id !== id));
     }, 5000);
   };
 
@@ -144,49 +133,40 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({
 };
 
 const Toast: React.FC<ToastMessage> = ({ message, type }) => {
-  const colors = {
-    success: "bg-green-600",
+  const colors: Record<ToastType, string> = {
+    success: "bg-emerald-600",
     error: "bg-red-600",
-    info: "bg-blue-600",
+    info: "bg-[var(--accent)]",
   };
   return (
-    <div
-      className={`text-white px-6 py-3 rounded-md shadow-lg ${colors[type]}`}
-    >
+    <div className={`text-white px-5 py-3 rounded-xl shadow-lg text-sm font-medium ${colors[type]} animate-slideIn`}>
       {message}
     </div>
   );
 };
 
-// --- Tabs Functionality ---
+// ─── Tabs ────────────────────────────────────────────────────────────────────
 interface TabsProps {
   tabs: string[];
   activeTab: string;
   setActiveTab: (tab: string) => void;
 }
 
-export const Tabs: React.FC<TabsProps> = ({
-  tabs,
-  activeTab,
-  setActiveTab,
-}) => {
-  return (
-    <div className="border-b border-slate-700">
-      <nav className="-mb-px flex space-x-8" aria-label="Tabs">
-        {tabs.map((tab) => (
-          <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
-            className={`${
-              activeTab === tab
-                ? "border-primary-500 text-primary-500"
-                : "border-transparent text-slate-400 hover:text-slate-200 hover:border-slate-300"
-            } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors`}
-          >
-            {tab}
-          </button>
-        ))}
-      </nav>
-    </div>
-  );
-};
+export const Tabs: React.FC<TabsProps> = ({ tabs, activeTab, setActiveTab }) => (
+  <div className="border-b border-[var(--border)]">
+    <nav className="-mb-px flex space-x-6" aria-label="Tabs">
+      {tabs.map((tab) => (
+        <button
+          key={tab}
+          onClick={() => setActiveTab(tab)}
+          className={`${activeTab === tab
+            ? "border-[var(--accent)] text-[var(--accent)] font-semibold"
+            : "border-transparent text-[var(--text-muted)] hover:text-[var(--text)] hover:border-[var(--border-2)]"
+            } whitespace-nowrap py-3 px-1 border-b-2 text-sm transition-all duration-200`}
+        >
+          {tab}
+        </button>
+      ))}
+    </nav>
+  </div>
+);

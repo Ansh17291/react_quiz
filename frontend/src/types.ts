@@ -12,6 +12,7 @@ export interface User {
   name: string;
   role: Role;
   points: number;
+  token?: string; // JWT token for authentication
 }
 
 export interface Question {

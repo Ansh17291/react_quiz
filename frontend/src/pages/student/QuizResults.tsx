@@ -274,7 +274,7 @@ const QuizResults = () => {
               const correctOption = question.correctAnswerIndex;
 
               return (
-                <div key={question.id} className="p-4 rounded-lg bg-slate-800">
+                <div key={question.id} className="p-4 rounded-lg theme-transition" style={{ background: 'var(--surface-3)', border: '1px solid var(--border)' }}>
                   <p className="font-bold mb-2">
                     {index + 1}. {question.questionText}
                   </p>
@@ -283,13 +283,11 @@ const QuizResults = () => {
                       (option: string, optIndex: number) => (
                         <div
                           key={optIndex}
-                          className={`p-2 rounded flex items-start gap-2 ${
-                            optIndex === correctOption ? "bg-green-900/50" : ""
-                          } ${
-                            optIndex === selectedOption && !isCorrect
+                          className={`p-2 rounded flex items-start gap-2 ${optIndex === correctOption ? "bg-green-900/50" : ""
+                            } ${optIndex === selectedOption && !isCorrect
                               ? "bg-red-900/50"
                               : ""
-                          }`}
+                            }`}
                         >
                           {optIndex === correctOption && (
                             <CheckCircleIcon className="w-6 h-6 text-green-500 shrink-0 mt-0.5" />
@@ -302,9 +300,8 @@ const QuizResults = () => {
                               <div className="w-6 h-6 shrink-0" />
                             )}
                           <span
-                            className={`${
-                              optIndex === selectedOption ? "font-semibold" : ""
-                            }`}
+                            className={`${optIndex === selectedOption ? "font-semibold" : ""
+                              }`}
                           >
                             {option}
                           </span>
@@ -342,30 +339,31 @@ const QuizResults = () => {
         )}
         {analysisError && <p className="text-red-500">{analysisError}</p>}
         {analysis && (
-          <div className="space-y-4 text-slate-300">
+          <div className="space-y-4" style={{ color: 'var(--text-muted)' }}>
             <div>
-              <h4 className="font-bold text-lg text-slate-100">Question</h4>
+              <h4 className="font-bold text-lg" style={{ color: 'var(--text)' }}>Question</h4>
               <p>{analysis.questionText}</p>
             </div>
             <div>
-              <h4 className="font-bold text-lg text-slate-100">Your Answer</h4>
+              <h4 className="font-bold text-lg" style={{ color: 'var(--text)' }}>Your Answer</h4>
               <p className="text-red-400">{analysis.yourAnswer}</p>
             </div>
             <div>
-              <h4 className="font-bold text-lg text-slate-100">
+              <h4 className="font-bold text-lg" style={{ color: 'var(--text)' }}>
                 Correct Answer
               </h4>
               <p className="text-green-400">{analysis.correctAnswer}</p>
             </div>
             <div>
-              <h4 className="font-bold text-lg text-slate-100">Explanation</h4>
+              <h4 className="font-bold text-lg" style={{ color: 'var(--text)' }}>Explanation</h4>
               <div
-                className="prose prose-sm prose-slate dark:prose-invert max-w-none"
+                className="prose prose-sm max-w-none theme-transition"
+                style={{ color: 'var(--text-muted)' }}
                 dangerouslySetInnerHTML={{ __html: analysis.explanation }}
               />
             </div>
             <div>
-              <h4 className="font-bold text-lg text-slate-100">
+              <h4 className="font-bold text-lg" style={{ color: 'var(--text)' }}>
                 Recommended Topic to Study
               </h4>
               <p className="font-semibold text-primary-400">

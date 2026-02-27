@@ -28,9 +28,10 @@ import {
   AnimatedWrapper,
   StaggeredList,
 } from "../../components/shared/AnimatedComponents";
+import MultiSelectDropdown from "../../components/shared/MultiSelectDropdown";
 
 const TeacherDashboard = () => {
-  const { users, results, addResource, removeUser } = useAppContext();
+  const { users, results, addResource, removeUser, addQuiz } = useAppContext();
   const { addToast } = useToast();
   const navigate = useNavigate();
 
@@ -59,6 +60,9 @@ const TeacherDashboard = () => {
   const [newStudentName, setNewStudentName] = useState("");
   const [newStudentPassword, setNewStudentPassword] = useState("");
   const [isAddingStudent, setIsAddingStudent] = useState(false);
+  const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>([]);
+
+  const allStudents = useMemo(() => users.filter((u) => u.role === "STUDENT").map(u => ({ id: u._id || u.id, name: u.name })), [users]);
 
   useEffect(() => {
     students.current = users.filter((u) => u.role === "STUDENT");
@@ -208,7 +212,8 @@ const TeacherDashboard = () => {
               {leaderboard.map((student, index) => (
                 <div
                   key={student.id}
-                  className="flex justify-between items-center p-3 bg-slate-700/50 rounded-lg hover:bg-slate-700 cursor-pointer transition-colors"
+                  className="flex justify-between items-center p-3 rounded-lg hover:bg-[var(--surface-2)] cursor-pointer transition-colors theme-transition"
+                  style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}
                   onClick={() => navigate(`/student/${student.id}`)}
                 >
                   <span className="font-medium flex items-center gap-3">
@@ -279,7 +284,8 @@ const TeacherDashboard = () => {
             {students.current.map((student) => (
               <div
                 key={student._id}
-                className="flex justify-between items-center p-3 bg-slate-700 rounded-lg"
+                className="flex justify-between items-center p-3 rounded-lg theme-transition"
+                style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}
               >
                 <span>{student.name}</span>
                 <div className="flex items-center gap-2">
@@ -288,7 +294,8 @@ const TeacherDashboard = () => {
                       <input
                         type="password"
                         placeholder="New password"
-                        className="p-2 rounded bg-slate-800 border border-slate-600"
+                        className="p-2 rounded border focus:outline-none focus:ring-2 focus:ring-[var(--accent)] theme-transition custom-scrollbar"
+                        style={{ background: 'var(--surface-3)', borderColor: 'var(--border)', color: 'var(--text)' }}
                         value={newPassword}
                         onChange={(e) => setNewPassword(e.target.value)}
                       />
@@ -351,19 +358,21 @@ const TeacherDashboard = () => {
               <textarea
                 value={quizText}
                 onChange={(e) => setQuizText(e.target.value)}
-                className="w-full h-40 p-2 border rounded-md bg-slate-700 border-slate-600 focus:ring-primary-500 focus:border-primary-500"
+                className="w-full h-40 p-2 border rounded-md focus:ring-primary-500 focus:border-primary-500 theme-transition custom-scrollbar"
+                style={{ background: 'var(--surface-2)', borderColor: 'var(--border)', color: 'var(--text)' }}
                 placeholder="Paste the content for the quiz here..."
               />
               <div className="flex flex-col sm:flex-row gap-4 items-center">
                 <label className="block">
-                  <span className="text-gray-300">Questions to generate:</span>
+                  <span style={{ color: 'var(--text-muted)' }}>Questions to generate:</span>
                   <input
                     type="number"
                     value={numQuestions}
                     onChange={(e) =>
                       setNumQuestions(Math.max(1, parseInt(e.target.value)))
                     }
-                    className="mt-1 block w-28 rounded-md border-slate-600 shadow-sm bg-slate-700 focus:border-primary-300 focus:ring focus:ring-primary-200 focus:ring-opacity-50"
+                    className="mt-1 block w-28 rounded-md shadow-sm focus:ring focus:ring-primary-200 focus:ring-opacity-50 theme-transition"
+                    style={{ background: 'var(--surface-2)', borderColor: 'var(--border)', color: 'var(--text)' }}
                   />
                 </label>
                 <div className="grow"></div>
@@ -426,6 +435,13 @@ const TeacherDashboard = () => {
                   }}
                   ref={genInputRef}
                 />
+                <MultiSelectDropdown
+                  options={allStudents}
+                  selectedIds={selectedStudentIds}
+                  onSelect={setSelectedStudentIds}
+                  placeholder="Assign students..."
+                  label="Assign Students"
+                />
                 <Button
                   onClick={async () => {
                     if (!quizText.trim()) {
@@ -441,7 +457,18 @@ const TeacherDashboard = () => {
                         quizText,
                         numQuestions
                       );
-                      await api.addQuiz({ title, questions } as any);
+                      await addQuiz(
+                        { title, questionPool: questions } as any,
+                        {
+                          studentIds: selectedStudentIds,
+                          deadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+                          timeLimit: 10,
+                          isLive: false,
+                          numQuestionsToAssign: questions.length
+                        } as any
+                      );
+                      setSelectedStudentIds([]);
+                      addToast("Quiz generated and assigned successfully!", "success");
                     } catch (e: any) {
                       setError(e.message || "Failed to generate quiz");
                     } finally {
@@ -464,20 +491,33 @@ const TeacherDashboard = () => {
           </Card>
 
           <Card>
-            <h3 className="text-xl font-semibold mb-4">Create Quiz Manually</h3>
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+              <h3 className="text-xl font-semibold">Create Quiz Manually</h3>
+
+              <MultiSelectDropdown
+                options={allStudents}
+                selectedIds={selectedStudentIds}
+                onSelect={setSelectedStudentIds}
+                placeholder="Choose students..."
+                label="Assign Students"
+              />
+            </div>
+
             <div className="space-y-4">
               <input
                 type="text"
                 placeholder="Quiz Title"
                 value={manualTitle}
                 onChange={(e) => setManualTitle(e.target.value)}
-                className="w-full p-2 border rounded-md bg-slate-700 border-slate-600"
+                className="w-full p-2 border rounded-md theme-transition"
+                style={{ background: 'var(--surface-2)', borderColor: 'var(--border)', color: 'var(--text)' }}
               />
               <div className="space-y-4">
                 {manualQuestions.map((q: any, qIndex: number) => (
                   <div
                     key={qIndex}
-                    className="p-4 bg-slate-800 border border-slate-700 rounded-lg space-y-3 relative"
+                    className="p-4 border rounded-lg space-y-3 relative theme-transition"
+                    style={{ background: 'var(--surface-3)', borderColor: 'var(--border)' }}
                   >
                     {manualQuestions.length > 1 && (
                       <button
@@ -486,7 +526,7 @@ const TeacherDashboard = () => {
                             prev.filter((_, i) => i !== qIndex)
                           )
                         }
-                        className="absolute top-2 right-2 text-slate-500 hover:text-red-400"
+                        className="absolute top-2 right-2 text-red-500 hover:text-red-600"
                       >
                         <XCircleIcon className="w-6 h-6" />
                       </button>
@@ -499,7 +539,8 @@ const TeacherDashboard = () => {
                         setManualQuestions(updated);
                       }}
                       placeholder={`Question ${qIndex + 1}`}
-                      className="w-full p-2 border rounded-md bg-slate-700 border-slate-600"
+                      className="w-full p-2 border rounded-md theme-transition custom-scrollbar"
+                      style={{ background: 'var(--surface-2)', borderColor: 'var(--border)', color: 'var(--text)' }}
                     />
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       {q.options.map((opt: string, optIndex: number) => (
@@ -513,7 +554,8 @@ const TeacherDashboard = () => {
                               updated[qIndex].correctAnswerIndex = optIndex;
                               setManualQuestions(updated);
                             }}
-                            className="h-5 w-5 text-primary-600 bg-slate-700 border-slate-500 focus:ring-primary-500"
+                            className="h-5 w-5 text-primary-600 focus:ring-primary-500 focus:ring-offset-[var(--surface-3)]"
+                            style={{ background: 'var(--surface-2)', borderColor: 'var(--border)' }}
                           />
                           <input
                             type="text"
@@ -525,7 +567,8 @@ const TeacherDashboard = () => {
                                 e.target.value;
                               setManualQuestions(updated);
                             }}
-                            className="w-full p-2 border rounded-md bg-slate-700 border-slate-600"
+                            className="w-full p-2 border rounded-md theme-transition"
+                            style={{ background: 'var(--surface-2)', borderColor: 'var(--border)', color: 'var(--text)' }}
                           />
                         </div>
                       ))}
@@ -533,11 +576,12 @@ const TeacherDashboard = () => {
                   </div>
                 ))}
               </div>
-              <div className="flex gap-4">
+
+              <div className="flex flex-wrap items-center gap-4 mt-8 pt-6 border-t theme-transition" style={{ borderColor: 'var(--border)' }}>
                 <Button
                   variant="secondary"
                   onClick={() =>
-                    setManualQuestions((prev) => [
+                    setManualQuestions((prev: any) => [
                       ...prev,
                       {
                         questionText: "",
@@ -549,6 +593,7 @@ const TeacherDashboard = () => {
                 >
                   <PlusCircleIcon className="w-5 h-5" /> Add Question
                 </Button>
+
                 <Button
                   variant="secondary"
                   disabled={isCreating}
@@ -568,7 +613,7 @@ const TeacherDashboard = () => {
                         baseQuestion,
                         2
                       );
-                      setManualQuestions((prev) => [...prev, ...newQs]);
+                      setManualQuestions((prev: any) => [...prev, ...newQs]);
                     } finally {
                       setIsCreating(false);
                     }
@@ -576,30 +621,47 @@ const TeacherDashboard = () => {
                 >
                   <SparklesIcon className="w-5 h-5" /> Generate with AI
                 </Button>
-                <div className="grow"></div>
+
+                <div className="hidden md:block grow"></div>
+
                 <Button
                   onClick={async () => {
-                    if (!manualTitle.trim()) return;
+                    if (!manualTitle.trim()) {
+                      addToast("Please enter a quiz title", "error");
+                      return;
+                    }
                     setIsCreating(true);
                     try {
-                      await api.addQuiz({
-                        title: manualTitle,
-                        questions: manualQuestions,
-                      } as any);
+                      await addQuiz(
+                        { title: manualTitle, questionPool: manualQuestions } as any,
+                        {
+                          studentIds: selectedStudentIds,
+                          deadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+                          timeLimit: 10,
+                          isLive: false,
+                          numQuestionsToAssign: manualQuestions.length
+                        } as any
+                      );
                       setManualTitle("");
                       setManualQuestions([
                         {
                           questionText: "",
                           options: ["", "", "", ""],
                           correctAnswerIndex: 0,
-                        },
+                        }
                       ]);
+                      setSelectedStudentIds([]);
+                      addToast("Manual quiz created and assigned successfully!", "success");
+                    } catch (e: any) {
+                      addToast(e.message || "Failed to create quiz", "error");
                     } finally {
                       setIsCreating(false);
                     }
                   }}
+                  disabled={isCreating}
+                  className="w-full md:w-auto px-10 bg-primary-600 hover:bg-primary-500 shadow-lg shadow-primary-500/20"
                 >
-                  Create Quiz
+                  {isCreating ? <Spinner /> : "Create Quiz"}
                 </Button>
               </div>
             </div>
@@ -607,34 +669,36 @@ const TeacherDashboard = () => {
         </div>
       )}
 
-      {activeTab === "Upload Resources" && (
-        <Card>
-          <h3 className="text-xl font-semibold mb-4">Upload Resource File</h3>
-          <p className="text-slate-300 mb-2">
-            Upload Word/Excel/PPT/Text files to Resources for students to
-            download.
-          </p>
-          <div className="flex items-center gap-4">
-            <label className="cursor-pointer">
-              <Button
-                variant="secondary"
-                disabled={uploadingResource}
-                onClick={() => resourceInputRef.current?.click()}
-              >
-                <UploadIcon className="w-5 h-5" /> Upload Resource
-              </Button>
-            </label>
-            <input
-              id="resource-upload"
-              type="file"
-              accept=".docx,.xlsx,.pptx,.txt,.pdf"
-              className="hidden"
-              onChange={handleUploadResourceFile}
-              ref={resourceInputRef}
-            />
-          </div>
-        </Card>
-      )}
+      {
+        activeTab === "Upload Resources" && (
+          <Card>
+            <h3 className="text-xl font-semibold mb-4">Upload Resource File</h3>
+            <p className="mb-2" style={{ color: 'var(--text-muted)' }}>
+              Upload Word/Excel/PPT/Text files to Resources for students to
+              download.
+            </p>
+            <div className="flex items-center gap-4">
+              <label className="cursor-pointer">
+                <Button
+                  variant="secondary"
+                  disabled={uploadingResource}
+                  onClick={() => resourceInputRef.current?.click()}
+                >
+                  <UploadIcon className="w-5 h-5" /> Upload Resource
+                </Button>
+              </label>
+              <input
+                id="resource-upload"
+                type="file"
+                accept=".docx,.xlsx,.pptx,.txt,.pdf"
+                className="hidden"
+                onChange={handleUploadResourceFile}
+                ref={resourceInputRef}
+              />
+            </div>
+          </Card>
+        )
+      }
 
       {/* Add Student Modal */}
       <Modal
@@ -656,7 +720,8 @@ const TeacherDashboard = () => {
               value={newStudentName}
               onChange={(e) => setNewStudentName(e.target.value)}
               placeholder="Enter username"
-              className="w-full p-2 border rounded-md bg-slate-700 border-slate-600 focus:ring-primary-500 focus:border-primary-500"
+              className="w-full p-2 border rounded-md focus:ring-primary-500 focus:border-primary-500 theme-transition"
+              style={{ background: 'var(--surface-2)', borderColor: 'var(--border)', color: 'var(--text)' }}
             />
           </div>
           <div>
@@ -666,9 +731,10 @@ const TeacherDashboard = () => {
               value={newStudentPassword}
               onChange={(e) => setNewStudentPassword(e.target.value)}
               placeholder="Enter password (min 6 characters)"
-              className="w-full p-2 border rounded-md bg-slate-700 border-slate-600 focus:ring-primary-500 focus:border-primary-500"
+              className="w-full p-2 border rounded-md focus:ring-primary-500 focus:border-primary-500 theme-transition"
+              style={{ background: 'var(--surface-2)', borderColor: 'var(--border)', color: 'var(--text)' }}
             />
-            <p className="text-xs text-slate-400 mt-1">
+            <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
               Make sure to save these credentials - they will be shown once
               after creation
             </p>
@@ -688,7 +754,7 @@ const TeacherDashboard = () => {
           </Button>
         </div>
       </Modal>
-    </AnimatedWrapper>
+    </AnimatedWrapper >
   );
 };
 

@@ -13,7 +13,6 @@ import {
   UserGroupIcon,
   TrophyIcon,
   ChartBarIcon,
-  BookOpenIcon,
 } from "../../components/Icons";
 import { api } from "../../services/api";
 import io from "socket.io-client";
@@ -24,7 +23,7 @@ const StudentDashboard = () => {
   const navigate = useNavigate();
   const { addToast } = useToast();
 
-  const [, setAssignments] = React.useState<any[]>([]);
+  const [assignments, setAssignments] = React.useState<any[]>([]);
   const [studentAssignments, setStudentAssignments] = React.useState<any[]>([]);
   const [assignedPolls, setAssignedPolls] = React.useState<any[]>([]);
   const [users, setUsers] = React.useState<any[]>([]);
@@ -37,7 +36,7 @@ const StudentDashboard = () => {
   const currentUserId = currentUser?._id || currentUser?.id;
 
   const studentResults = React.useMemo(() => {
-    return results.filter((r) => r.userId === currentUserId);
+    return results.filter((r) => String(r.userId) === String(currentUserId));
   }, [results, currentUserId]);
 
   const avgScore = React.useMemo(() => {
@@ -65,7 +64,6 @@ const StudentDashboard = () => {
         setIsLoading(true);
         setError(null);
 
-        // Fetch all data in parallel via shared API
         const [usersRes, assignmentsRes, quizzesRes, resultsRes] =
           await Promise.all([
             api.getUsers(),
@@ -74,7 +72,6 @@ const StudentDashboard = () => {
             api.getResults(),
           ]);
 
-        // Update state with the fetched data
         setUsers(usersRes || []);
         setQuizzes(quizzesRes || []);
         setResults(resultsRes || []);
@@ -86,9 +83,8 @@ const StudentDashboard = () => {
           // ignore
         }
 
-        // Filter assignments for the current student
         const studentAssignmentsData = (assignmentsRes || []).filter((a: any) =>
-          a.studentIds.includes(currentUserId)
+          (a.studentIds || []).some((id: any) => String(id) === String(currentUserId))
         );
 
         setStudentAssignments(studentAssignmentsData);
@@ -115,7 +111,7 @@ const StudentDashboard = () => {
     });
 
     socket.on("newAssignment", async (newAssignment) => {
-      if (newAssignment.studentIds.includes(currentUserId)) {
+      if ((newAssignment.studentIds || []).some((id: any) => String(id) === String(currentUserId))) {
         setStudentAssignments((prev) => {
           const assignmentExists = prev.some(
             (assignment) => assignment._id === newAssignment._id
@@ -126,14 +122,13 @@ const StudentDashboard = () => {
           }
           return prev;
         });
-        // Fetch quizzes again to get the new quiz title
         const quizzesRes = await api.getQuizzes();
         setQuizzes(quizzesRes || []);
       }
     });
 
     socket.on("deassignQuiz", ({ quizId, studentIds }) => {
-      if (studentIds.includes(currentUserId)) {
+      if ((studentIds || []).some((id: any) => String(id) === String(currentUserId))) {
         addToast("A quiz has been unassigned.", "info");
         setStudentAssignments((prev) =>
           prev.filter((assignment) => assignment.quizId !== quizId)
@@ -157,39 +152,40 @@ const StudentDashboard = () => {
   return (
     <AnimatedWrapper className="space-y-8">
       <div>
-        <h2 className="text-3xl font-bold">
+        <h2 className="text-3xl font-bold" style={{ color: 'var(--text)' }}>
           Welcome back, {currentUser?.name}!
         </h2>
-        <p className="text-slate-400">Ready to conquer some quizzes today?</p>
+        <p style={{ color: 'var(--text-muted)' }}>Ready to conquer some quizzes today?</p>
       </div>
-      <div className="grid lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 space-y-6">
+      <div className="grid lg:grid-cols-3 gap-6 items-stretch">
+        <div className="lg:col-span-2 flex flex-col gap-6">
           <Card>
-            <h3 className="text-xl font-semibold mb-4">Assigned Quizzes</h3>
+            <h3 className="text-xl font-semibold mb-4" style={{ color: 'var(--text)' }}>Assigned Quizzes</h3>
             {isLoading ? (
               <div className="flex justify-center items-center p-8">
-                <div className="w-8 h-8 border-4 border-primary-500 border-t-transparent rounded-full animate-spin"></div>
+                <div className="w-8 h-8 border-4 border-t-transparent rounded-full animate-spin" style={{ borderColor: 'var(--accent)', borderTopColor: 'transparent' }}></div>
               </div>
             ) : error ? (
-              <div className="p-4 text-red-400 bg-red-500/20 rounded-lg">
+              <div className="p-4 rounded-lg" style={{ color: 'var(--error)', background: 'rgba(239,68,68,0.1)' }}>
                 {error}
               </div>
             ) : studentAssignments.length > 0 ? (
               <StaggeredList className="space-y-3">
                 {studentAssignments.map((assignment) => {
-                  const quiz = quizzes.find((q) => q._id === assignment.quizId);
+                  const quiz = quizzes.find((q) => String(q._id) === String(assignment.quizId));
                   const isTaken = studentResults.some(
-                    (r) => r.quizId === quiz?._id
+                    (r) => String(r.quizId) === String(quiz?._id)
                   );
                   const isExpired = new Date(assignment.deadline) < new Date();
                   if (!quiz) return null;
                   return (
                     <div
                       key={assignment._id || assignment.id}
-                      className="p-4 bg-slate-700/50 rounded-lg flex justify-between items-center hover:bg-slate-700 transition-colors duration-150 ease-out hover:scale-[1.01]"
+                      className="p-4 rounded-lg flex justify-between items-center transition-all duration-150 ease-out hover:scale-[1.01] theme-transition"
+                      style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}
                     >
                       <div>
-                        <p className="font-semibold text-lg">
+                        <p className="font-semibold text-lg" style={{ color: 'var(--text)' }}>
                           {quiz.title}{" "}
                           {assignment.isLive && (
                             <span className="text-xs font-medium text-red-400 bg-red-900/50 px-2 py-0.5 rounded-full ml-2">
@@ -197,7 +193,7 @@ const StudentDashboard = () => {
                             </span>
                           )}
                         </p>
-                        <p className="text-sm text-slate-400 flex items-center gap-1.5 mt-1">
+                        <p className="text-sm flex items-center gap-1.5 mt-1" style={{ color: 'var(--text-muted)' }}>
                           <CalendarIcon className="w-4 h-4" /> Deadline:{" "}
                           {new Date(assignment.deadline).toLocaleDateString()}
                         </p>
@@ -227,20 +223,21 @@ const StudentDashboard = () => {
                 })}
               </StaggeredList>
             ) : (
-              <p className="text-slate-400 text-center py-4">
+              <p className="text-center py-4" style={{ color: 'var(--text-muted)' }}>
                 No quizzes assigned yet. Check back later!
               </p>
             )}
           </Card>
           <Card>
-            <h3 className="text-xl font-semibold mb-4">Assigned Polls</h3>
+            <h3 className="text-xl font-semibold mb-4" style={{ color: 'var(--text)' }}>Assigned Polls</h3>
             {assignedPolls.length > 0 ? (
               <div className="space-y-3">
                 {assignedPolls.map((p) => (
-                  <div key={p._id || p.id} className="p-4 bg-slate-700/50 rounded-lg flex justify-between items-center">
+                  <div key={p._id || p.id} className="p-4 rounded-lg flex justify-between items-center theme-transition"
+                    style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
                     <div>
-                      <div className="font-semibold">{p.title || `Poll`}</div>
-                      <div className="text-sm text-slate-400">{(p.questions || []).map((q: any) => q.questionText).slice(0, 2).join(' • ')}{(p.questions || []).length > 2 ? ' ...' : ''}</div>
+                      <div className="font-semibold" style={{ color: 'var(--text)' }}>{p.title || `Poll`}</div>
+                      <div className="text-sm" style={{ color: 'var(--text-muted)' }}>{(p.questions || []).map((q: any) => q.questionText).slice(0, 2).join(' • ')}{(p.questions || []).length > 2 ? ' ...' : ''}</div>
                     </div>
                     <div>
                       <Button onClick={() => navigate(`/poll/${p._id || p.id}`)}>Open Poll</Button>
@@ -249,17 +246,17 @@ const StudentDashboard = () => {
                 ))}
               </div>
             ) : (
-              <p className="text-slate-400">No polls assigned.</p>
+              <p style={{ color: 'var(--text-muted)' }}>No polls assigned.</p>
             )}
           </Card>
           <Card>
-            <h3 className="text-xl font-semibold mb-4">Your Activity</h3>
+            <h3 className="text-xl font-semibold mb-4" style={{ color: 'var(--text)' }}>Your Activity</h3>
             <ContributionHeatmap results={studentResults} />
           </Card>
         </div>
-        <div className="lg:col-span-1 space-y-6">
-          <Card>
-            <h3 className="text-xl font-semibold mb-4 text-center">
+        <div className="lg:col-span-1 flex flex-col gap-6">
+          <Card className="flex-1">
+            <h3 className="text-xl font-semibold mb-4 text-center" style={{ color: 'var(--text)' }}>
               Your Stats
             </h3>
             <div className="space-y-4">
@@ -278,35 +275,6 @@ const StudentDashboard = () => {
                 value={avgScore === "N/A" ? "N/A" : `${avgScore}%`}
                 icon={<ChartBarIcon />}
               />
-            </div>
-          </Card>
-          <Card>
-            <h3 className="text-xl font-semibold mb-4">Quick Links</h3>
-            <div className="flex flex-col gap-3">
-              <Button
-                onClick={() => {
-                  // Use the correct ID field
-                  navigate(`/student/${currentUserId}`);
-                }}
-                variant="secondary"
-                className="w-full"
-              >
-                <UserGroupIcon className="w-5 h-5" /> My Profile
-              </Button>
-              <Button
-                onClick={() => navigate("/discussions")}
-                variant="secondary"
-                className="w-full"
-              >
-                <UserGroupIcon className="w-5 h-5" /> Discussions
-              </Button>
-              <Button
-                onClick={() => navigate("/resources")}
-                variant="secondary"
-                className="w-full"
-              >
-                <BookOpenIcon className="w-5 h-5" /> Resources
-              </Button>
             </div>
           </Card>
         </div>

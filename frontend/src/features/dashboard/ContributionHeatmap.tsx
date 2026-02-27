@@ -75,7 +75,7 @@ export const ContributionHeatmap = ({ results }: { results: QuizResult[] }) => {
   }, [contributions]);
 
   const getColorClass = (count: number) => {
-    if (count === 0) return "bg-slate-700";
+    if (count === 0) return "theme-transition"; // Replaced bg-slate-700, custom styling logic required below
     if (maxCount <= 1) return "bg-green-500";
     const q1 = Math.max(1, Math.floor(maxCount * 0.25));
     const q2 = Math.max(2, Math.floor(maxCount * 0.5));
@@ -91,7 +91,7 @@ export const ContributionHeatmap = ({ results }: { results: QuizResult[] }) => {
   return (
     <div className="flex gap-3">
       {/* Day Labels */}
-      <div className="grid grid-rows-7 gap-1 text-xs text-slate-400 shrink-0 mt-6 text-right">
+      <div className="grid grid-rows-7 gap-1 text-xs shrink-0 mt-6 text-right" style={{ color: 'var(--text-muted)' }}>
         <div className="h-4"></div>
         <div className="h-4 flex items-center">Mon</div>
         <div className="h-4"></div>
@@ -109,8 +109,8 @@ export const ContributionHeatmap = ({ results }: { results: QuizResult[] }) => {
           {monthLabels.map(({ label, colStart }) => (
             <div
               key={`${label}-${colStart}`}
-              className="text-xs text-slate-400"
-              style={{ gridColumnStart: colStart }}
+              className="text-xs"
+              style={{ gridColumnStart: colStart, color: 'var(--text-muted)' }}
             >
               {label}
             </div>
@@ -132,12 +132,13 @@ export const ContributionHeatmap = ({ results }: { results: QuizResult[] }) => {
             return (
               <div key={index} className="relative group">
                 <div
-                  className={`w-4 h-4 rounded-sm ${getColorClass(count)} transition-transform duration-150 group-hover:scale-110`}
+                  className={`w-4 h-4 rounded-sm transition-transform duration-150 group-hover:scale-110 ${count > 0 ? getColorClass(count) : ''}`}
+                  style={count === 0 ? { background: 'var(--surface-3)' } : {}}
                 ></div>
-                <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-xs px-2 py-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10 pointer-events-none">
+                <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 text-white text-xs px-2 py-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10 pointer-events-none" style={{ background: 'var(--text)' }}>
                   {count} {count === 1 ? "quiz" : "quizzes"} on{" "}
                   {day.toLocaleDateString()}
-                  <div className="absolute top-full left-1/2 -translate-x-1/2 w-0 h-0 border-x-4 border-x-transparent border-t-4 border-t-slate-900"></div>
+                  <div className="absolute top-full left-1/2 -translate-x-1/2 w-0 h-0 border-x-4 border-x-transparent border-t-4" style={{ borderTopColor: 'var(--text)' }}></div>
                 </div>
               </div>
             );

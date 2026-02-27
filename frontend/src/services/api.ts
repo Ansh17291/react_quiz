@@ -14,7 +14,22 @@ async function request(path: string, opts: RequestInit = {}) {
     }
 
     const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-    if (token) headers['Authorization'] = `Bearer ${token}`;
+    if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+    } else {
+        // Log warning for protected routes when token is missing
+        const isAuthRoute = path.includes('/api/classrooms') ||
+            path === '/api/users' ||
+            path === '/api/quizzes' ||
+            path === '/api/resources' ||
+            path === '/api/posts' ||
+            path === '/api/results' ||
+            path === '/api/assignments';
+
+        if (isAuthRoute) {
+            console.warn(`Auth required but token missing for: ${path}. User may need to re-login.`);
+        }
+    }
 
     const res = await fetch(`${BASE}${path}`, {
         headers,
@@ -45,7 +60,7 @@ export const api = {
     addQuiz: (quiz: Partial<Quiz>) => request('/api/quizzes', { method: 'POST', body: JSON.stringify(quiz) }),
     submitQuizResult: (quizId: string, payload: Partial<QuizResult>) => request(`/api/quizzes/${quizId}/submit`, { method: 'POST', body: JSON.stringify(payload) }),
     getResults: () => request('/api/results').catch(() => []),
-    getAssignments: () => request('/api/assignment').catch(() => []),
+    getAssignments: () => request('/api/assignments').catch(() => []),
     createAssignment: (payload: { quizId: string; studentIds: string[]; deadline?: string; timeLimit?: number; numQuestionsToAssign?: number; isLive?: boolean; }) => request('/api/assignments', { method: 'POST', body: JSON.stringify(payload) }),
     getAssignmentByQuiz: (quizId: string) => request(`/api/assignments/by-quiz/${quizId}`),
     updateAssignmentByQuiz: (quizId: string, payload: { studentIds: string[]; deadline?: string; timeLimit?: number; isLive?: boolean; }) => request(`/api/assignments/by-quiz/${quizId}`, { method: 'PUT', body: JSON.stringify(payload) }),
@@ -68,6 +83,19 @@ export const api = {
     getPollAssignment: (pollId: string) => request(`/api/polls/assignments/by-poll/${pollId}`),
     getAssignedPolls: () => request('/api/polls/assigned'),
     deletePoll: (pollId: string) => request(`/api/polls/${pollId}`, { method: 'DELETE' }),
+    // Classrooms
+    getClassrooms: () => request('/api/classrooms'),
+    getClassroom: (id: string) => request(`/api/classrooms/${id}`),
+    createClassroom: (payload: { name: string; description?: string; studentIds?: string[] }) => request('/api/classrooms', { method: 'POST', body: JSON.stringify(payload) }),
+    joinClassroom: (classCode: string) => request('/api/classrooms/join', { method: 'POST', body: JSON.stringify({ classCode }) }),
+    getClassroomResources: (id: string) => request(`/api/classrooms/${id}/resources`),
+    uploadClassroomResource: (classroomId: string, formData: FormData) => fetch(`${BASE}/api/classrooms/${classroomId}/resources`, {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${JSON.parse(localStorage.getItem('currentUser') || '{}').token || ''}`
+        },
+        body: formData
+    }).then(res => res.json()),
 };
 
 export default api;

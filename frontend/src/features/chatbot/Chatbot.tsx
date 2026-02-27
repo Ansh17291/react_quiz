@@ -72,13 +72,13 @@ export const Chatbot = ({
 
   return (
     <div className="fixed bottom-24 right-6 w-[calc(100vw-3rem)] max-w-md h-[70vh] max-h-[500px] z-50">
-      <AnimatedWrapper className="bg-slate-800 rounded-lg shadow-2xl w-full h-full flex flex-col border border-slate-700">
-        <header className="p-4 border-b border-slate-700 flex justify-between items-center">
+      <AnimatedWrapper className="rounded-lg shadow-2xl w-full h-full flex flex-col border theme-transition" style={{ background: 'var(--surface-2)', borderColor: 'var(--border)' }}>
+        <header className="p-4 border-b flex justify-between items-center" style={{ borderColor: 'var(--border)' }}>
           <h3 className="font-bold text-lg flex items-center gap-2">
             <LightBulbIcon className="w-5 h-5 text-yellow-400" /> AI Learning
             Assistant
           </h3>
-          <button onClick={onClose} className="text-slate-400 hover:text-white">
+          <button onClick={onClose} className="hover:text-[var(--text)]" style={{ color: 'var(--text-muted)' }}>
             &times;
           </button>
         </header>
@@ -86,19 +86,19 @@ export const Chatbot = ({
           {history.map((msg, index) => (
             <div
               key={index}
-              className={`flex ${
-                msg.role === "user" ? "justify-end" : "justify-start"
-              }`}
+              className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"
+                }`}
             >
               <div
-                className={`max-w-[80%] p-3 rounded-lg ${
-                  msg.role === "user"
-                    ? "bg-primary-600 text-white"
-                    : "bg-slate-700"
-                }`}
+                className={`max-w-[80%] p-3 rounded-lg theme-transition ${msg.role === "user"
+                    ? "bg-[var(--accent)] text-white"
+                    : ""
+                  }`}
+                style={msg.role !== "user" ? { background: 'var(--surface-3)', color: 'var(--text)' } : {}}
               >
                 <div
-                  className="prose prose-sm prose-invert"
+                  className="prose prose-sm theme-transition"
+                  style={{ color: 'inherit' }}
                   dangerouslySetInnerHTML={{
                     __html: msg.parts[0].text.replace(/\n/g, "<br />"),
                   }}
@@ -108,7 +108,7 @@ export const Chatbot = ({
           ))}
           {isLoading && (
             <div className="flex justify-start">
-              <div className="max-w-[80%] p-3 rounded-lg bg-slate-700">
+              <div className="max-w-[80%] p-3 rounded-lg theme-transition" style={{ background: 'var(--surface-3)' }}>
                 <Spinner />
               </div>
             </div>
@@ -117,13 +117,15 @@ export const Chatbot = ({
         </div>
         <form
           onSubmit={handleSend}
-          className="p-4 border-t border-slate-700 flex gap-2"
+          className="p-4 border-t flex gap-2 theme-transition"
+          style={{ borderColor: 'var(--border)' }}
         >
           <input
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            className="flex-1 p-2 rounded-md bg-slate-700 border-slate-600 focus:ring-primary-500 focus:border-primary-500"
+            className="flex-1 p-2 rounded-md border focus:ring-[var(--accent)] focus:border-[var(--accent)] theme-transition"
+            style={{ background: 'var(--surface-3)', borderColor: 'var(--border)', color: 'var(--text)' }}
             placeholder="Ask a question..."
           />
           <Button type="submit" disabled={isLoading || !input.trim()}>

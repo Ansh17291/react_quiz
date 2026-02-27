@@ -44,8 +44,8 @@ const QuizTaker = () => {
       const selectedOptionIndex =
         original && selectedAnswerText
           ? original.options.findIndex(
-              (opt: string) => opt === selectedAnswerText
-            )
+            (opt: string) => opt === selectedAnswerText
+          )
           : -1;
 
       const isCorrect =
@@ -277,11 +277,11 @@ const QuizTaker = () => {
           <h2 className="text-2xl font-bold">
             You are about to start "{quiz.title}"
           </h2>
-          <p className="text-lg text-slate-300">
+          <p className="text-lg" style={{ color: 'var(--text-muted)' }}>
             This quiz will start in{" "}
             <span className="font-bold text-red-400">full-screen mode</span>.
           </p>
-          <p className="text-slate-400">
+          <p style={{ color: 'var(--text-muted)' }}>
             To ensure a fair testing environment, exiting full-screen or
             switching to another tab will automatically submit your quiz. Please
             stay focused on the test.
@@ -308,7 +308,7 @@ const QuizTaker = () => {
 
   return (
     <Card className="max-w-6xl mx-auto">
-      <div className="flex justify-between items-center mb-4 pb-4 border-b border-slate-700">
+      <div className="flex justify-between items-center mb-4 pb-4 border-b theme-transition" style={{ borderColor: 'var(--border)' }}>
         <h2 className="text-2xl font-bold">{quiz.title}</h2>
         <div className="text-xl font-semibold bg-red-900 text-red-200 px-3 py-1 rounded-md">
           {minutes}:{seconds < 10 ? "0" : ""}
@@ -328,11 +328,15 @@ const QuizTaker = () => {
               <button
                 key={index}
                 onClick={() => handleAnswerSelect(currentQuestion.id, index)}
-                className={`w-full text-left p-4 rounded-lg border-2 transition-colors ${
-                  selectedAnswers[currentQuestion.id] === index
+                className={`w-full text-left p-4 rounded-lg border-2 transition-colors ${selectedAnswers[currentQuestion.id] === index
                     ? "bg-primary-900 border-primary-500"
-                    : "bg-slate-700 hover:bg-slate-600 border-transparent"
-                }`}
+                    : "border-transparent"
+                  }`}
+                style={
+                  selectedAnswers[currentQuestion.id] === index
+                    ? {}
+                    : { background: 'var(--surface-2)', color: 'var(--text)' }
+                }
               >
                 {option}
               </button>
@@ -359,21 +363,24 @@ const QuizTaker = () => {
                   <button
                     key={q.id}
                     onClick={() => setCurrentQuestionIndex(idx)}
-                    className={`p-2 rounded text-sm font-semibold border ${
-                      isCurrent ? "border-white" : "border-transparent"
-                    } ${
-                      isMarked
+                    className={`p-2 rounded text-sm font-semibold border ${isCurrent ? "border-white" : "border-transparent"
+                      } ${isMarked
                         ? "bg-yellow-600 text-black"
                         : attempted
-                        ? "bg-green-600 text-white"
-                        : "bg-slate-700 text-slate-200"
-                    }`}
+                          ? "bg-green-600 text-white"
+                          : "bg-transparent"
+                      }`}
+                    style={
+                      !(isMarked || attempted)
+                        ? { background: 'var(--surface-3)', color: 'var(--text-muted)' }
+                        : {}
+                    }
                     title={
                       isMarked
                         ? "Marked for review"
                         : attempted
-                        ? "Attempted"
-                        : "Not attempted"
+                          ? "Attempted"
+                          : "Not attempted"
                     }
                   >
                     {idx + 1}

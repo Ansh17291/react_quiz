@@ -4,8 +4,8 @@ import { api } from "../../services/api";
 import { useAppContext } from "../../context/AppContext";
 import { Card, Button, Spinner, useToast } from "../../components/ui";
 
-const POLL_POLL_INTERVAL = 500; // ms - faster polling for real-time updates
-const SESSION_TIMEOUT = 3000; // ms - show connection error after this
+const POLL_POLL_INTERVAL = 500;
+const SESSION_TIMEOUT = 3000;
 
 const PollTaker: React.FC = () => {
     const { pollId } = useParams();
@@ -19,7 +19,7 @@ const PollTaker: React.FC = () => {
     const [selected, setSelected] = useState<number | null>(null);
     const [hasVoted, setHasVoted] = useState(false);
     const [voting, setVoting] = useState(false);
-    const [clientTimer, setClientTimer] = useState<number | null>(null); // Client-side countdown
+    const [clientTimer, setClientTimer] = useState<number | null>(null);
     const [connectionError, setConnectionError] = useState(false);
     const intervalRef = useRef<number | null>(null);
     const timerRef = useRef<number | null>(null);
@@ -34,11 +34,9 @@ const PollTaker: React.FC = () => {
                 setPolls(all || []);
                 const found = (all || []).find((p: any) => (p._id || p.id) === pollId);
                 setPoll(found || null);
-                // check assignment: if poll exists, verify assignment
                 if (found) {
                     try {
                         const assign = await api.getPollAssignment(found._id || found.id);
-                        // if assignment exists and current user not in list, we still let teacher/admin in but students should be blocked
                         setPoll({ ...found, assignment: assign });
                     } catch (e) { }
                 }
@@ -48,17 +46,13 @@ const PollTaker: React.FC = () => {
                 setLoading(false);
             }
         })();
-        return () => {
-            mounted = false;
-        };
+        return () => { mounted = false; };
     }, [pollId]);
 
     useEffect(() => {
-        // Client-side countdown timer for more accurate display
         if (session && session.timeLeft !== null && session.timeLeft > 0) {
             setClientTimer(session.timeLeft);
             if (timerRef.current) clearInterval(timerRef.current);
-
             timerRef.current = window.setInterval(() => {
                 setClientTimer((prev) => {
                     if (prev === null || prev <= 0) return prev;
@@ -69,13 +63,9 @@ const PollTaker: React.FC = () => {
             setClientTimer(0);
             if (timerRef.current) clearInterval(timerRef.current);
         }
-
-        return () => {
-            if (timerRef.current) clearInterval(timerRef.current);
-        };
+        return () => { if (timerRef.current) clearInterval(timerRef.current); };
     }, [session?.timeLeft, session?.active]);
 
-    // Poll for active session with connection error handling
     useEffect(() => {
         const tick = async () => {
             if (!poll) return;
@@ -83,13 +73,10 @@ const PollTaker: React.FC = () => {
                 const s = await api.getPollSession(poll._id || poll.id);
                 setSession(s);
                 setConnectionError(false);
-
-                // Reset timeout on successful connection
                 if (sessionTimeoutRef.current) clearTimeout(sessionTimeoutRef.current);
                 sessionTimeoutRef.current = setTimeout(() => {
                     if (!connectionError) setConnectionError(true);
                 }, SESSION_TIMEOUT);
-
                 if (s && s.voters && (s.voters as any[]).length > 0) {
                     if (currentUser) {
                         const uid = currentUser._id || currentUser.id;
@@ -101,7 +88,6 @@ const PollTaker: React.FC = () => {
                 setConnectionError(true);
             }
         };
-
         tick();
         if (intervalRef.current) clearInterval(intervalRef.current);
         intervalRef.current = window.setInterval(tick, POLL_POLL_INTERVAL);
@@ -113,13 +99,8 @@ const PollTaker: React.FC = () => {
 
     useEffect(() => {
         if (!session) return;
-        // If session expired and results available, wait then advance
         if (session.timeLeft === 0) {
-            // show results for 4s then navigate away or wait for admin to advance
-            const t = setTimeout(() => {
-                // students will wait for admin to advance; if admin doesn't advance, move to next poll
-                advanceToNextPoll();
-            }, 4000);
+            const t = setTimeout(() => { advanceToNextPoll(); }, 4000);
             return () => clearTimeout(t);
         }
     }, [session]);
@@ -131,7 +112,6 @@ const PollTaker: React.FC = () => {
 
     const handleVote = async (index: number) => {
         if (!poll || hasVoted || voting) return;
-
         if (poll.assignment && currentUser) {
             const uid = currentUser._id || currentUser.id;
             const assigned = (poll.assignment.studentIds || []).map((s: any) => (s._id || s.id || s)).map(String);
@@ -140,7 +120,6 @@ const PollTaker: React.FC = () => {
                 return;
             }
         }
-
         setSelected(index);
         setVoting(true);
         try {
@@ -148,7 +127,6 @@ const PollTaker: React.FC = () => {
             setHasVoted(true);
             addToast('✓ Vote recorded!', 'success');
         } catch (e: any) {
-            console.error(e);
             addToast(e?.response?.data?.message || 'Failed to record vote', 'error');
             setSelected(null);
         } finally {
@@ -156,28 +134,16 @@ const PollTaker: React.FC = () => {
         }
     };
 
-    // Handle keyboard navigation
     useEffect(() => {
         const handleKeyPress = (e: KeyboardEvent) => {
             if (hasVoted || voting || !session || (clientTimer === 0 || session.active === false)) return;
             const qIndex = session?.currentQuestionIndex ?? 0;
             const question = (poll?.questions || [])[qIndex];
             const optCount = (question?.options || []).length;
-
-            if (e.key === 'ArrowUp') {
-                e.preventDefault();
-                if (selected === null) setSelected(optCount - 1);
-                else if (selected > 0) setSelected(selected - 1);
-            } else if (e.key === 'ArrowDown') {
-                e.preventDefault();
-                if (selected === null) setSelected(0);
-                else if (selected < optCount - 1) setSelected(selected + 1);
-            } else if (e.key === 'Enter' && selected !== null) {
-                e.preventDefault();
-                handleVote(selected);
-            }
+            if (e.key === 'ArrowUp') { e.preventDefault(); if (selected === null) setSelected(optCount - 1); else if (selected > 0) setSelected(selected - 1); }
+            else if (e.key === 'ArrowDown') { e.preventDefault(); if (selected === null) setSelected(0); else if (selected < optCount - 1) setSelected(selected + 1); }
+            else if (e.key === 'Enter' && selected !== null) { e.preventDefault(); handleVote(selected); }
         };
-
         window.addEventListener('keydown', handleKeyPress);
         return () => window.removeEventListener('keydown', handleKeyPress);
     }, [selected, session, voting, hasVoted, poll, clientTimer]);
@@ -194,93 +160,67 @@ const PollTaker: React.FC = () => {
     };
 
     const advanceToNextPoll = () => {
-        if (!polls || polls.length === 0 || !poll) {
-            navigate("/student");
-            return;
-        }
+        if (!polls || polls.length === 0 || !poll) { navigate("/student"); return; }
         const idx = polls.findIndex((p) => (p._id || p.id) === (poll._id || poll.id));
-        if (idx < 0 || idx + 1 >= polls.length) {
-            navigate("/student");
-        } else {
-            const next = polls[idx + 1];
-            navigate(`/poll/${next._id || next.id}`);
-        }
+        if (idx < 0 || idx + 1 >= polls.length) navigate("/student");
+        else { const next = polls[idx + 1]; navigate(`/poll/${next._id || next.id}`); }
     };
 
-    if (loading) {
-        return (
-            <div className="min-h-screen flex items-center justify-center">
-                <Spinner />
-            </div>
-        );
-    }
+    if (loading) return <div className="min-h-screen flex items-center justify-center"><Spinner /></div>;
 
-    if (!poll) {
-        return (
-            <div className="min-h-screen flex items-center justify-center p-4">
-                <Card className="max-w-2xl text-center">
-                    <h2 className="text-2xl font-bold mb-2">No poll found</h2>
-                    <p className="text-slate-400">This poll may not exist or hasn't been created yet.</p>
-                </Card>
-            </div>
-        );
-    }
+    if (!poll) return (
+        <div className="min-h-screen flex items-center justify-center p-4">
+            <Card className="max-w-2xl text-center">
+                <h2 className="text-2xl font-bold mb-2" style={{ color: 'var(--text)' }}>No poll found</h2>
+                <p style={{ color: 'var(--text-muted)' }}>This poll may not exist or hasn't been created yet.</p>
+            </Card>
+        </div>
+    );
 
     return (
-        <div className="min-h-screen flex items-start justify-center p-6" style={{ background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)' }}>
+        <div className="min-h-screen flex items-start justify-center p-6" style={{ background: 'var(--bg)' }}>
             <Card className="w-full max-w-4xl">
                 {/* Connection Error Banner */}
                 {connectionError && (
-                    <div className="mb-4 p-3 bg-red-900 border border-red-700 rounded-lg flex items-center justify-between animate-pulse">
-                        <span className="text-red-200 flex items-center gap-2">⚠️ Connection lost. Some updates may be delayed.</span>
-                        <button
-                            onClick={handleRefreshSession}
-                            className="text-xs bg-red-700 hover:bg-red-600 px-3 py-1 rounded text-white transition-colors font-semibold"
-                        >
+                    <div className="mb-4 p-3 rounded-lg flex items-center justify-between animate-pulse" style={{ background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.4)' }}>
+                        <span className="flex items-center gap-2" style={{ color: 'var(--error)' }}>⚠️ Connection lost. Some updates may be delayed.</span>
+                        <button onClick={handleRefreshSession} className="text-xs px-3 py-1 rounded font-semibold transition-colors" style={{ background: 'var(--error)', color: '#fff' }}>
                             Reconnect
                         </button>
                     </div>
                 )}
 
-                {/* Header Section */}
+                {/* Header */}
                 <div className="mb-6">
-                    <h2 className="text-3xl font-bold mb-2 text-white">{poll.title || `Poll`}</h2>
-
-                    {/* Question Counter & Progress */}
+                    <h2 className="text-3xl font-bold mb-2" style={{ color: 'var(--text)' }}>{poll.title || `Poll`}</h2>
                     <div className="flex items-center justify-between mb-4">
-                        <div className="text-sm text-slate-300">
-                            Question <span className="font-bold text-blue-400">{(session?.currentQuestionIndex ?? 0) + 1}</span> of <span className="font-bold">{(poll.questions || []).length}</span>
+                        <div className="text-sm" style={{ color: 'var(--text-muted)' }}>
+                            Question <span className="font-bold" style={{ color: 'var(--accent)' }}>{(session?.currentQuestionIndex ?? 0) + 1}</span> of <span className="font-bold" style={{ color: 'var(--text)' }}>{(poll.questions || []).length}</span>
                         </div>
-                        {/* Progress Bar */}
-                        <div className="flex-1 mx-4 h-2 bg-slate-700 rounded-full overflow-hidden">
+                        <div className="flex-1 mx-4 h-2 rounded-full overflow-hidden" style={{ background: 'var(--surface-2)' }}>
                             <div
-                                style={{ width: `${((session?.currentQuestionIndex ?? 0) + 1) / (poll.questions || []).length * 100}%` }}
-                                className="h-full bg-gradient-to-r from-blue-500 to-blue-600 transition-all duration-300"
+                                style={{ width: `${((session?.currentQuestionIndex ?? 0) + 1) / (poll.questions || []).length * 100}%`, background: 'var(--accent)' }}
+                                className="h-full transition-all duration-300"
                             />
                         </div>
                     </div>
 
-                    {/* Timer Section */}
                     {session && session.timeLeft !== null && (
                         <div className="flex items-center gap-2">
-                            <div
-                                style={{
-                                    padding: '10px 16px',
-                                    borderRadius: '8px',
-                                    backgroundColor: (clientTimer || 0) < 5000 && (clientTimer || 0) > 0 ? '#7f1d1d' : (clientTimer || 0) === 0 ? '#991b1b' : '#1e3a8a',
-                                    color: (clientTimer || 0) < 5000 ? '#fca5a5' : '#93c5fd',
-                                    fontWeight: 'bold',
-                                    fontSize: '18px',
-                                    minWidth: '100px',
-                                    textAlign: 'center',
-                                    animation: (clientTimer || 0) < 5000 && (clientTimer || 0) > 0 ? 'pulse 1s infinite' : 'none'
-                                }}
-                            >
+                            <div style={{
+                                padding: '10px 16px',
+                                borderRadius: '8px',
+                                backgroundColor: (clientTimer || 0) < 5000 && (clientTimer || 0) > 0 ? 'rgba(239,68,68,0.2)' : (clientTimer || 0) === 0 ? 'rgba(239,68,68,0.3)' : 'var(--accent-light)',
+                                color: (clientTimer || 0) < 5000 ? 'var(--error)' : 'var(--accent)',
+                                fontWeight: 'bold',
+                                fontSize: '18px',
+                                minWidth: '100px',
+                                textAlign: 'center',
+                                border: `1px solid ${(clientTimer || 0) < 5000 ? 'rgba(239,68,68,0.4)' : 'var(--border)'}`,
+                            }}>
                                 ⏱ {Math.ceil((clientTimer || 0) / 1000)}s
                             </div>
-                            {clientTimer === 0 && (
-                                <span className="text-sm font-semibold text-yellow-400 animate-pulse">📊 Results Shown</span>
-                            )}
+                            {clientTimer === 0 && <span className="text-sm font-semibold animate-pulse" style={{ color: 'var(--warning)' }}>📊 Results Shown</span>}
                         </div>
                     )}
                 </div>
@@ -290,13 +230,13 @@ const PollTaker: React.FC = () => {
                     const qIndex = session?.currentQuestionIndex ?? 0;
                     const question = (poll.questions || [])[qIndex];
                     return question && question.questionText ? (
-                        <div className="mb-6 p-4 bg-slate-800 rounded-lg border border-slate-700">
-                            <p className="text-lg text-white font-semibold">{question.questionText}</p>
+                        <div className="mb-6 p-4 rounded-lg theme-transition" style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
+                            <p className="text-lg font-semibold" style={{ color: 'var(--text)' }}>{question.questionText}</p>
                         </div>
                     ) : null;
                 })()}
 
-                {/* Options Section */}
+                {/* Options */}
                 <div className="space-y-3 mb-6">
                     {(() => {
                         const qIndex = session?.currentQuestionIndex ?? 0;
@@ -307,63 +247,45 @@ const PollTaker: React.FC = () => {
                             const percent = totalVotes > 0 ? Math.round((votes / totalVotes) * 100) : 0;
                             const isSelected = selected === i;
                             return (
-                                <div key={i} className="">
+                                <div key={i}>
                                     <button
                                         onClick={() => handleVote(i)}
                                         disabled={hasVoted || isSessionExpired || voting}
-                                        aria-label={`Option ${i + 1}: ${opt}${isSelected ? ' (Selected)' : ''}${isSelected && hasVoted ? ' (Your vote)' : ''}`}
                                         style={{
-                                            borderColor: isSelected && !isSessionExpired ? '#22c55e' : '#374151',
-                                            backgroundColor: isSelected && !isSessionExpired ? '#14532d' : '#111827',
+                                            borderColor: isSelected && !isSessionExpired ? 'var(--accent)' : 'var(--border)',
+                                            backgroundColor: isSelected && !isSessionExpired ? 'var(--accent-light)' : 'var(--surface-2)',
                                             opacity: isSessionExpired ? 0.75 : voting && isSelected ? 0.7 : 1,
-                                        }}
-                                        className={`w-full text-left px-4 py-3 rounded-lg border-2 transition-all flex justify-between items-center ${isSessionExpired ? 'cursor-default' : 'hover:border-slate-500 hover:bg-slate-800 cursor-pointer'
-                                            }`}
-                                        onMouseEnter={(e) => {
-                                            if (!isSessionExpired && !hasVoted && !voting) {
-                                                (e.currentTarget as HTMLButtonElement).style.backgroundColor = '#1f2937';
-                                                (e.currentTarget as HTMLButtonElement).style.borderColor = '#4b5563';
-                                            } else if (!isSessionExpired && isSelected) {
-                                                (e.currentTarget as HTMLButtonElement).style.backgroundColor = '#166534';
-                                            }
-                                        }}
-                                        onMouseLeave={(e) => {
-                                            if (isSelected && !isSessionExpired) {
-                                                (e.currentTarget as HTMLButtonElement).style.backgroundColor = '#14532d';
-                                            } else if (!isSessionExpired) {
-                                                (e.currentTarget as HTMLButtonElement).style.backgroundColor = '#111827';
-                                            }
+                                            width: '100%', textAlign: 'left', padding: '12px 16px',
+                                            borderRadius: '8px', border: '2px solid',
+                                            transition: 'all 0.15s', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                                            cursor: isSessionExpired ? 'default' : 'pointer',
                                         }}
                                     >
                                         <div className="flex-1">
-                                            <span className="block text-white font-medium">{opt}</span>
+                                            <span className="block font-medium" style={{ color: 'var(--text)' }}>{opt}</span>
                                             {isSelected && !isSessionExpired && !hasVoted && !voting && (
-                                                <span className="text-xs text-green-300 mt-1">✓ Selected (Press Enter to submit)</span>
+                                                <span className="text-xs mt-1" style={{ color: 'var(--success)' }}>✓ Selected (Press Enter to submit)</span>
                                             )}
                                             {voting && isSelected && (
-                                                <span className="text-xs text-blue-300 mt-1 flex items-center gap-1">
+                                                <span className="text-xs mt-1 flex items-center gap-1" style={{ color: 'var(--info)' }}>
                                                     <span className="inline-block animate-spin">⏳</span> Submitting...
                                                 </span>
                                             )}
                                             {isSelected && hasVoted && (
-                                                <span className="text-xs text-green-400 mt-1">✓ Your vote</span>
+                                                <span className="text-xs mt-1" style={{ color: 'var(--success)' }}>✓ Your vote</span>
                                             )}
                                         </div>
-                                        <span className="text-lg font-bold text-slate-300">{votes}</span>
+                                        <span className="text-lg font-bold" style={{ color: 'var(--text-muted)' }}>{votes}</span>
                                     </button>
 
-                                    {/* Result bar - show only after session expires */}
                                     {isSessionExpired && (
-                                        <div className="mt-2 flex items-center gap-2 animate-fadeIn">
-                                            <div className="flex-1 h-6 bg-slate-700 rounded-lg overflow-hidden border border-slate-600">
-                                                <div
-                                                    style={{ width: `${percent}%`, backgroundColor: '#3b82f6' }}
-                                                    className="h-full transition-all duration-700 flex items-center justify-end pr-2"
-                                                >
+                                        <div className="mt-2 flex items-center gap-2">
+                                            <div className="flex-1 h-6 rounded-lg overflow-hidden" style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
+                                                <div style={{ width: `${percent}%`, background: 'var(--accent)' }} className="h-full transition-all duration-700 flex items-center justify-end pr-2">
                                                     {percent > 10 && <span className="text-xs font-bold text-white">{percent}%</span>}
                                                 </div>
                                             </div>
-                                            <span className="text-sm font-semibold text-blue-400 w-12 text-right">{percent}%</span>
+                                            <span className="text-sm font-semibold w-12 text-right" style={{ color: 'var(--accent)' }}>{percent}%</span>
                                         </div>
                                     )}
                                 </div>
@@ -372,37 +294,37 @@ const PollTaker: React.FC = () => {
                     })()}
                 </div>
 
-                {/* Stats Section */}
-                <div className="grid grid-cols-3 gap-4 p-4 bg-slate-800 rounded-lg border border-slate-700 mb-6">
+                {/* Stats */}
+                <div className="grid grid-cols-3 gap-4 p-4 rounded-lg mb-6 theme-transition" style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
                     <div>
-                        <p className="text-sm text-slate-400">Total Votes</p>
-                        <p className="text-2xl font-bold text-blue-400">{totalVotes}</p>
+                        <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Total Votes</p>
+                        <p className="text-2xl font-bold" style={{ color: 'var(--accent)' }}>{totalVotes}</p>
                     </div>
                     {hasVoted ? (
                         <div className="text-center">
-                            <p className="text-sm text-slate-400">Status</p>
-                            <p className="text-lg font-semibold text-green-400">✓ Voted</p>
+                            <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Status</p>
+                            <p className="text-lg font-semibold" style={{ color: 'var(--success)' }}>✓ Voted</p>
                         </div>
                     ) : (
                         <div className="text-center">
-                            <p className="text-sm text-slate-400">Your Vote</p>
-                            <p className="text-sm font-semibold text-yellow-400">Pending</p>
+                            <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Your Vote</p>
+                            <p className="text-sm font-semibold" style={{ color: 'var(--warning)' }}>Pending</p>
                         </div>
                     )}
                     <div className="text-right">
-                        <p className="text-sm text-slate-400">Participants</p>
-                        <p className="text-2xl font-bold text-purple-400">{session?.voters?.length || 0}</p>
+                        <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Participants</p>
+                        <p className="text-2xl font-bold" style={{ color: 'var(--accent-2)' }}>{session?.voters?.length || 0}</p>
                     </div>
                 </div>
 
                 {/* Keyboard Hint */}
                 {!hasVoted && clientTimer !== 0 && (
-                    <div className="text-xs text-slate-500 text-center mb-4 bg-slate-900 p-2 rounded border border-slate-700">
+                    <div className="text-xs text-center mb-4 p-2 rounded theme-transition" style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', color: 'var(--text-subtle)' }}>
                         💡 Tip: Use ↑↓ arrow keys to navigate options, press Enter to submit
                     </div>
                 )}
 
-                {/* Action Buttons */}
+                {/* Actions */}
                 <div className="mt-6 flex gap-3 justify-end">
                     <Button variant="secondary" onClick={() => navigate('/student')}>Exit Poll</Button>
                 </div>
