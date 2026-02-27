@@ -6,6 +6,7 @@ const ClassroomSchema = mongoose.Schema({
     teacher: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
     students: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
     classCode: { type: String, required: true, unique: true },
+    isMeetingLive: { type: Boolean, default: false },
     createdAt: { type: Date, default: Date.now },
 });
 

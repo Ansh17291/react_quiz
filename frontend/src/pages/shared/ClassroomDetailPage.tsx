@@ -3,8 +3,9 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useAppContext } from "../../context/AppContext";
 import { Button, Card, Spinner, Tabs } from "../../components/ui";
 import { AnimatedWrapper, StaggeredList } from "../../components/shared/AnimatedComponents";
-import { BookOpenIcon, UserGroupIcon, UploadIcon, DocumentDownloadIcon, ChevronLeftIcon } from "../../components/Icons";
+import { BookOpenIcon, UserGroupIcon, UploadIcon, DocumentDownloadIcon, ChevronLeftIcon, VideoCameraIcon, XCircleIcon } from "../../components/Icons";
 import { api, BASE } from "../../services/api";
+import { io } from "socket.io-client";
 import { useToast } from "../../components/ui";
 import { Roles } from "../../types";
 
@@ -18,6 +19,8 @@ const ClassroomDetailPage = () => {
     const [isLoading, setIsLoading] = useState(true);
     const [activeTab, setActiveTab] = useState("Materials");
     const [uploading, setUploading] = useState(false);
+    const [isMeetingLive, setIsMeetingLive] = useState(false);
+    const [showJitsi, setShowJitsi] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
@@ -33,6 +36,7 @@ const ClassroomDetailPage = () => {
                 api.getClassroomResources(id)
             ]);
             setClassroom(clsData);
+            setIsMeetingLive(clsData.isMeetingLive);
             setResources(resData || []);
         } catch (err) {
             console.error(err);
@@ -40,6 +44,52 @@ const ClassroomDetailPage = () => {
             navigate("/classrooms");
         } finally {
             setIsLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        if (!id) return;
+        const socket = io(BASE + "/classrooms", {
+            transports: ["polling", "websocket"]
+        });
+
+        socket.on("meetingStarted", (data) => {
+            if (data.classroomId === id) {
+                setIsMeetingLive(true);
+                addToast("A live meeting has started!", "success");
+            }
+        });
+
+        socket.on("meetingEnded", (data) => {
+            if (data.classroomId === id) {
+                setIsMeetingLive(false);
+                setShowJitsi(false);
+                addToast("The meeting has ended", "info");
+            }
+        });
+
+        return () => {
+            socket.disconnect();
+        };
+    }, [id]);
+
+    const handleMeetingToggle = async () => {
+        if (!id) return;
+        try {
+            if (isMeetingLive) {
+                await api.endMeeting(id);
+                setIsMeetingLive(false);
+                setShowJitsi(false);
+                addToast("Meeting ended", "info");
+            } else {
+                await api.startMeeting(id);
+                setIsMeetingLive(true);
+                setShowJitsi(true);
+                addToast("Meeting started!", "success");
+            }
+        } catch (err) {
+            console.error(err);
+            addToast("Failed to toggle meeting", "error");
         }
     };
 
@@ -101,7 +151,7 @@ const ClassroomDetailPage = () => {
             </div>
 
             <Tabs
-                tabs={currentUser?.role === Roles.TEACHER ? ["Materials", "Students"] : ["Materials"]}
+                tabs={currentUser?.role === Roles.TEACHER ? ["Materials", "Meet", "Students"] : ["Materials", "Meet"]}
                 activeTab={activeTab}
                 setActiveTab={setActiveTab}
             />
@@ -168,6 +218,56 @@ const ClassroomDetailPage = () => {
                 </Card>
             )}
 
+            {activeTab === "Meet" && (
+                <div className="min-h-[400px] flex flex-col items-center justify-center text-center p-12 rounded-2xl border border-dashed border-white/10">
+                    <div className={`p-6 rounded-full mb-6 theme-transition ${isMeetingLive ? 'bg-red-500/10 animate-pulse' : ''}`}
+                        style={{ background: isMeetingLive ? 'rgba(239, 68, 68, 0.1)' : 'transparent', border: isMeetingLive ? 'none' : '2px dashed var(--border)' }}>
+                        <VideoCameraIcon className={`w-16 h-16 ${isMeetingLive ? 'text-red-500' : ''}`}
+                            style={{ color: isMeetingLive ? '#ef4444' : 'var(--text-muted)' }} />
+                    </div>
+
+                    <h3 className="text-2xl font-bold mb-2" style={{ color: 'var(--text)' }}>
+                        {isMeetingLive ? "Live Meeting in Progress" : "Classroom Video Meet"}
+                    </h3>
+
+                    <p className="max-w-md mb-8" style={{ color: 'var(--text-muted)' }}>
+                        {isMeetingLive
+                            ? "A live session is currently active. Join now to participate in the classroom discussion."
+                            : "Start a video meeting to connect with your students in real-time. Students can join once the meeting is started."}
+                    </p>
+
+                    <div className="flex gap-4">
+                        {isMeetingLive && currentUser?.role === Roles.STUDENT && (
+                            <Button onClick={() => setShowJitsi(true)} variant="primary">
+                                <VideoCameraIcon className="w-5 h-5 mr-2" /> Join Living Meeting
+                            </Button>
+                        )}
+
+                        {currentUser?.role === Roles.TEACHER && (
+                            <Button
+                                onClick={handleMeetingToggle}
+                                variant={isMeetingLive ? "danger" : "primary"}
+                            >
+                                <VideoCameraIcon className="w-5 h-5 mr-2" />
+                                {isMeetingLive ? "End Meeting" : "Start Meeting"}
+                            </Button>
+                        )}
+
+                        {isMeetingLive && currentUser?.role === Roles.TEACHER && (
+                            <Button onClick={() => setShowJitsi(true)} variant="secondary">
+                                Open Meeting UI
+                            </Button>
+                        )}
+                    </div>
+
+                    {!isMeetingLive && currentUser?.role === Roles.STUDENT && (
+                        <p className="mt-4 text-sm" style={{ color: 'var(--text-muted)' }}>
+                            No active meeting. You'll be notified when the teacher starts one.
+                        </p>
+                    )}
+                </div>
+            )}
+
             {activeTab === "Students" && (
                 <Card>
                     <h3 className="text-xl font-semibold mb-6 flex items-center gap-2" style={{ color: 'var(--text)' }}>
@@ -193,6 +293,37 @@ const ClassroomDetailPage = () => {
                         )}
                     </StaggeredList>
                 </Card>
+            )}
+            {showJitsi && (
+                <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 md:p-8">
+                    <div className="w-full h-full max-w-6xl bg-[#1e222d] rounded-2xl overflow-hidden shadow-2xl flex flex-col relative border border-white/10">
+                        <div className="p-4 border-b border-white/10 flex justify-between items-center bg-[#1e222d]">
+                            <div className="flex items-center gap-3">
+                                <div className="p-2 bg-red-500/10 rounded-lg">
+                                    <VideoCameraIcon className="w-5 h-5 text-red-500" />
+                                </div>
+                                <div>
+                                    <h3 className="text-lg font-bold text-white leading-tight">Live Classroom: {classroom.name}</h3>
+                                    <p className="text-xs text-white/50">Room Code: {classroom.classCode}</p>
+                                </div>
+                            </div>
+                            <button
+                                onClick={() => setShowJitsi(false)}
+                                className="p-2 hover:bg-white/5 rounded-full transition-colors group"
+                            >
+                                <XCircleIcon className="w-8 h-8 text-white/40 group-hover:text-white" />
+                            </button>
+                        </div>
+                        <div className="flex-1 bg-black">
+                            <iframe
+                                src={`https://meet.jit.si/${classroom.classCode}#config.prejoinPageEnabled=false&userInfo.displayName="${currentUser?.name || 'User'}"&interfaceConfig.TOOLBAR_BUTTONS=["microphone","camera","closedcaptions","desktop","embedmeeting","fullscreen","fodeviceselection","hangup","profile","chat","recording","livestreaming","etherpad","sharedvideo","settings","raisehand","videoquality","filmstrip","invite","feedback","stats","shortcuts","tileview","videobackgroundblur","download","help","mute-everyone","security"]`}
+                                allow="camera; microphone; display-capture; autoplay; clipboard-write"
+                                className="w-full h-full border-none"
+                                title="Jitsi Meeting"
+                            ></iframe>
+                        </div>
+                    </div>
+                </div>
             )}
         </AnimatedWrapper>
     );

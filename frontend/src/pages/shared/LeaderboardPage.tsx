@@ -24,7 +24,9 @@ const LeaderboardPage = () => {
   const [overallLeaderboard, setOverallLeaderboard] = useState<any[]>([]);
 
   useEffect(() => {
-    const socket = io(`${BASE}/leaderboard`);
+    const socket = io(`${BASE}/leaderboard`, {
+      transports: ["polling", "websocket"]
+    });
 
     socket.on("connect", () => {
       setLoading(false);

@@ -96,6 +96,8 @@ export const api = {
         },
         body: formData
     }).then(res => res.json()),
+    startMeeting: (id: string) => request(`/api/classrooms/${id}/start-meeting`, { method: 'POST' }),
+    endMeeting: (id: string) => request(`/api/classrooms/${id}/end-meeting`, { method: 'POST' }),
     searchYoutubeVideos: (query: string): Promise<any[]> => request(`/api/youtube/search?q=${encodeURIComponent(query)}`),
 };
 

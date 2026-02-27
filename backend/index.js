@@ -117,6 +117,20 @@ assignmentsNamespace.on("connection", (socket) => {
   console.log("Client connected to assignments");
 });
 
+const classroomsNamespace = io.of("/classrooms");
+
+function notifyMeetingStarted(classroomId, classCode) {
+  classroomsNamespace.emit("meetingStarted", { classroomId, classCode });
+}
+
+function notifyMeetingEnded(classroomId) {
+  classroomsNamespace.emit("meetingEnded", { classroomId });
+}
+
+classroomsNamespace.on("connection", (socket) => {
+  console.log("Client connected to classrooms socket");
+});
+
 // Health
 app.get("/api/health", (req, res) => res.json({ status: "ok" }));
 
@@ -1008,6 +1022,45 @@ app.get("/api/classrooms/:id/resources", authenticateJWT, async (req, res) => {
   } catch (e) {
     console.error(e);
     res.status(500).json({ error: "Failed to fetch resources" });
+  }
+});
+
+// Meeting controls
+app.post("/api/classrooms/:id/start-meeting", authenticateJWT, async (req, res) => {
+  try {
+    if (req.user.role !== "TEACHER" && req.user.role !== "ADMIN") {
+      return res.status(403).json({ error: "Only teachers can start meetings" });
+    }
+    const classroom = await Classroom.findById(req.params.id);
+    if (!classroom) return res.status(404).json({ error: "Classroom not found" });
+
+    classroom.isMeetingLive = true;
+    await classroom.save();
+
+    notifyMeetingStarted(classroom._id, classroom.classCode);
+    res.json({ success: true, isMeetingLive: true });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: "Failed to start meeting" });
+  }
+});
+
+app.post("/api/classrooms/:id/end-meeting", authenticateJWT, async (req, res) => {
+  try {
+    if (req.user.role !== "TEACHER" && req.user.role !== "ADMIN") {
+      return res.status(403).json({ error: "Only teachers can end meetings" });
+    }
+    const classroom = await Classroom.findById(req.params.id);
+    if (!classroom) return res.status(404).json({ error: "Classroom not found" });
+
+    classroom.isMeetingLive = false;
+    await classroom.save();
+
+    notifyMeetingEnded(classroom._id);
+    res.json({ success: true, isMeetingLive: false });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: "Failed to end meeting" });
   }
 });
 
