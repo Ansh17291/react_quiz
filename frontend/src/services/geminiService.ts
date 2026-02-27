@@ -1,5 +1,5 @@
 import { GoogleGenAI, Type, Chat } from "@google/genai";
-import type { Question, AIAnalysis } from '../types';
+import type { Question, AIAnalysis, Difficulty } from '../types';
 
 if (! import.meta.env.VITE_API_KEY) {
     console.warn("API_KEY environment variable not set. Using a placeholder. AI features will not work.");
@@ -32,9 +32,9 @@ const quizGenerationSchema = {
     required: ["quizTitle", "questions"]
 };
 
-export const generateQuizFromText = async (text: string, numQuestions: number = 10): Promise<{ title: string; questions: Omit<Question, 'id'>[] }> => {
+export const generateQuizFromText = async (text: string, numQuestions: number = 10, difficulty: Difficulty = 'Medium'): Promise<{ title: string; questions: Omit<Question, 'id'>[] }> => {
     try {
-        const prompt = `Based on the following text, create a multiple-choice quiz with exactly ${numQuestions} questions. Each question should have 4 options. Ensure the correctAnswerIndex is the 0-based index of the correct option in the options array.
+        const prompt = `Based on the following text, create a multiple-choice quiz with exactly ${numQuestions} questions at a ${difficulty} difficulty level. Each question should have 4 options. Ensure the correctAnswerIndex is the 0-based index of the correct option in the options array.
 
         Text:
         ---
@@ -65,9 +65,9 @@ export const generateQuizFromText = async (text: string, numQuestions: number = 
     }
 };
 
-export const generateQuizFromTopics = async (topics: string[], numQuestions: number = 5): Promise<{ title: string; questions: Omit<Question, 'id'>[] }> => {
+export const generateQuizFromTopics = async (topics: string[], numQuestions: number = 5, difficulty: Difficulty = 'Medium'): Promise<{ title: string; questions: Omit<Question, 'id'>[] }> => {
     try {
-        const prompt = `A student is struggling with the concepts in the following questions. Create a new, different multiple-choice quiz with exactly ${numQuestions} questions to help them practice these concepts. The new questions should cover the same underlying topics but should not be identical to the provided questions. Each new question must have 4 options.
+        const prompt = `A student is struggling with the concepts in the following questions. Create a new, different multiple-choice quiz with exactly ${numQuestions} questions at a ${difficulty} difficulty level to help them practice these concepts. The new questions should cover the same underlying topics but should not be identical to the provided questions. Each new question must have 4 options.
 
         Struggled Questions/Topics:
         ---

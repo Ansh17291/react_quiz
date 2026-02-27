@@ -99,16 +99,21 @@ const QuizResults = () => {
     setAnalysis(null);
     setIsModalOpen(true);
     try {
-      const userAnswerText =
-        studentAnswer.selectedOptionIndex > -1
+      const isTextQuestion = question.type === 'text';
+      const userAnswerText = isTextQuestion
+        ? studentAnswer.textAnswer || "No answer provided"
+        : (studentAnswer.selectedOptionIndex !== undefined && studentAnswer.selectedOptionIndex > -1
           ? question.options[studentAnswer.selectedOptionIndex]
-          : "No answer provided";
+          : "No answer provided");
+
       const analysisResult = await analyzeAnswer(question, userAnswerText);
       setAnalysis({
         ...analysisResult,
         questionText: question.questionText,
         yourAnswer: userAnswerText,
-        correctAnswer: question.options[question.correctAnswerIndex],
+        correctAnswer: isTextQuestion
+          ? (question.correctTextAnswer || "")
+          : question.options[question.correctAnswerIndex],
         explanation: analysisResult.explanation,
         remedialTopic: analysisResult.remedialTopic,
       });
@@ -157,8 +162,10 @@ const QuizResults = () => {
           id: `q-${Date.now()}-${i}`,
           // Ensure all required Question fields are present
           questionText: q.questionText,
+          type: q.type,
           options: q.options,
           correctAnswerIndex: q.correctAnswerIndex,
+          correctTextAnswer: q.correctTextAnswer,
         })),
         createdBy: "AI" as const,
       };
@@ -279,33 +286,55 @@ const QuizResults = () => {
                     {index + 1}. {question.questionText}
                   </p>
                   <div className="space-y-2">
-                    {question.options.map(
-                      (option: string, optIndex: number) => (
-                        <div
-                          key={optIndex}
-                          className={`p-2 rounded flex items-start gap-2 ${optIndex === correctOption ? "bg-green-900/50" : ""
-                            } ${optIndex === selectedOption && !isCorrect
-                              ? "bg-red-900/50"
-                              : ""
-                            }`}
-                        >
-                          {optIndex === correctOption && (
-                            <CheckCircleIcon className="w-6 h-6 text-green-500 shrink-0 mt-0.5" />
-                          )}
-                          {optIndex === selectedOption && !isCorrect && (
-                            <XCircleIcon className="w-6 h-6 text-red-500 shrink-0 mt-0.5" />
-                          )}
-                          {optIndex !== correctOption &&
-                            optIndex !== selectedOption && (
-                              <div className="w-6 h-6 shrink-0" />
+                    {question.type === 'text' ? (
+                      <div className="space-y-2">
+                        <div className={`p-3 rounded-md border ${isCorrect ? 'bg-green-900/30 border-green-500/50' : 'bg-red-900/30 border-red-500/50'}`}>
+                          <p className="text-sm font-semibold mb-1" style={{ color: 'var(--text-muted)' }}>Your Answer:</p>
+                          <p className="flex items-center gap-2">
+                            {isCorrect ? (
+                              <CheckCircleIcon className="w-5 h-5 text-green-500" />
+                            ) : (
+                              <XCircleIcon className="w-5 h-5 text-red-500" />
                             )}
-                          <span
-                            className={`${optIndex === selectedOption ? "font-semibold" : ""
+                            {studentAnswer.textAnswer || "No answer provided"}
+                          </p>
+                        </div>
+                        {!isCorrect && (
+                          <div className="p-3 rounded-md border bg-green-900/10 border-green-500/30">
+                            <p className="text-sm font-semibold mb-1" style={{ color: 'var(--text-muted)' }}>Correct Answer:</p>
+                            <p className="text-green-400">{question.correctTextAnswer}</p>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      question.options.map(
+                        (option: string, optIndex: number) => (
+                          <div
+                            key={optIndex}
+                            className={`p-2 rounded flex items-start gap-2 ${optIndex === correctOption ? "bg-green-900/50" : ""
+                              } ${optIndex === selectedOption && !isCorrect
+                                ? "bg-red-900/50"
+                                : ""
                               }`}
                           >
-                            {option}
-                          </span>
-                        </div>
+                            {optIndex === correctOption && (
+                              <CheckCircleIcon className="w-6 h-6 text-green-500 shrink-0 mt-0.5" />
+                            )}
+                            {optIndex === selectedOption && !isCorrect && (
+                              <XCircleIcon className="w-6 h-6 text-red-500 shrink-0 mt-0.5" />
+                            )}
+                            {optIndex !== correctOption &&
+                              optIndex !== selectedOption && (
+                                <div className="w-6 h-6 shrink-0" />
+                              )}
+                            <span
+                              className={`${optIndex === selectedOption ? "font-semibold" : ""
+                                }`}
+                            >
+                              {option}
+                            </span>
+                          </div>
+                        )
                       )
                     )}
                   </div>

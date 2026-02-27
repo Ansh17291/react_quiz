@@ -10,9 +10,9 @@ import {
 import { Button, Card } from "../../components/ui";
 import {
   CalendarIcon,
-  UserGroupIcon,
   TrophyIcon,
-  ChartBarIcon,
+  RankingIcon,
+  ChartPieIcon,
 } from "../../components/Icons";
 import { api, BASE } from "../../services/api";
 import io from "socket.io-client";
@@ -265,12 +265,12 @@ const StudentDashboard = () => {
               <StatCard
                 label="Overall Rank"
                 value={`#${overallRank}`}
-                icon={<UserGroupIcon />}
+                icon={<RankingIcon />}
               />
               <StatCard
                 label="Average Score"
                 value={avgScore === "N/A" ? "N/A" : `${avgScore}%`}
-                icon={<ChartBarIcon />}
+                icon={<ChartPieIcon />}
               />
             </div>
           </Card>

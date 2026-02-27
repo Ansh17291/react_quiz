@@ -19,6 +19,7 @@ import {
   XCircleIcon,
   PlusCircleIcon,
 } from "../../components/Icons";
+import type { Difficulty } from "../../types";
 import {
   generateQuizFromText,
   generateSimilarQuestions,
@@ -42,13 +43,14 @@ const TeacherDashboard = () => {
   const txtInputRef = useRef<HTMLInputElement | null>(null);
   const genInputRef = useRef<HTMLInputElement | null>(null);
   const [numQuestions, setNumQuestions] = useState(10);
+  const [difficulty, setDifficulty] = useState<Difficulty>('Medium');
   const [error, setError] = useState("");
   const [uploadingResource, setUploadingResource] = useState(false);
   const resourceInputRef = useRef<HTMLInputElement | null>(null);
 
   const [manualTitle, setManualTitle] = useState("");
   const [manualQuestions, setManualQuestions] = useState<any>([
-    { questionText: "", options: ["", "", "", ""], correctAnswerIndex: 0 },
+    { questionText: "", type: 'multiple-choice', options: ["", "", "", ""], correctAnswerIndex: 0, correctTextAnswer: "" },
   ]);
 
   const students = useRef<any[]>([]);
@@ -375,6 +377,19 @@ const TeacherDashboard = () => {
                     style={{ background: 'var(--surface-2)', borderColor: 'var(--border)', color: 'var(--text)' }}
                   />
                 </label>
+                <label className="block">
+                  <span style={{ color: 'var(--text-muted)' }}>Difficulty:</span>
+                  <select
+                    value={difficulty}
+                    onChange={(e) => setDifficulty(e.target.value as Difficulty)}
+                    className="mt-1 block w-28 rounded-md shadow-sm focus:ring focus:ring-primary-200 focus:ring-opacity-50 theme-transition"
+                    style={{ background: 'var(--surface-2)', borderColor: 'var(--border)', color: 'var(--text)' }}
+                  >
+                    <option value="Easy">Easy</option>
+                    <option value="Medium">Medium</option>
+                    <option value="Hard">Hard</option>
+                  </select>
+                </label>
                 <div className="grow"></div>
                 <label className="cursor-pointer">
                   <Button
@@ -455,7 +470,8 @@ const TeacherDashboard = () => {
                     try {
                       const { title, questions } = await generateQuizFromText(
                         quizText,
-                        numQuestions
+                        numQuestions,
+                        difficulty
                       );
                       await addQuiz(
                         { title, questionPool: questions } as any,
@@ -542,37 +558,79 @@ const TeacherDashboard = () => {
                       className="w-full p-2 border rounded-md theme-transition custom-scrollbar"
                       style={{ background: 'var(--surface-2)', borderColor: 'var(--border)', color: 'var(--text)' }}
                     />
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      {q.options.map((opt: string, optIndex: number) => (
-                        <div key={optIndex} className="flex items-center gap-2">
-                          <input
-                            type="radio"
-                            name={`correct-${qIndex}`}
-                            checked={q.correctAnswerIndex === optIndex}
-                            onChange={() => {
-                              const updated = [...manualQuestions];
-                              updated[qIndex].correctAnswerIndex = optIndex;
-                              setManualQuestions(updated);
-                            }}
-                            className="h-5 w-5 text-primary-600 focus:ring-primary-500 focus:ring-offset-[var(--surface-3)]"
-                            style={{ background: 'var(--surface-2)', borderColor: 'var(--border)' }}
-                          />
+                    <div className="flex flex-col sm:flex-row gap-4">
+                      <label className="block">
+                        <span style={{ color: 'var(--text-muted)' }}>Question Type</span>
+                        <select
+                          value={q.type || 'multiple-choice'}
+                          onChange={(e) => {
+                            const updated = [...manualQuestions];
+                            updated[qIndex].type = e.target.value;
+                            setManualQuestions(updated);
+                          }}
+                          className="mt-1 block w-full p-2 rounded-md theme-transition"
+                          style={{ background: 'var(--surface-2)', borderColor: 'var(--border)', color: 'var(--text)' }}
+                        >
+                          <option value="multiple-choice">Multiple Choice</option>
+                          <option value="text">Text (Open Ended)</option>
+                        </select>
+                      </label>
+                    </div>
+
+                    {(q.type === 'multiple-choice' || !q.type) ? (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {q.options.map((opt: string, optIndex: number) => (
+                          <div key={optIndex} className="flex items-center gap-2">
+                            <input
+                              type="radio"
+                              name={`correct-${qIndex}`}
+                              checked={q.correctAnswerIndex === optIndex}
+                              onChange={() => {
+                                const updated = [...manualQuestions];
+                                updated[qIndex].correctAnswerIndex = optIndex;
+                                setManualQuestions(updated);
+                              }}
+                              className="h-5 w-5 text-primary-600 focus:ring-primary-500 focus:ring-offset-[var(--surface-3)]"
+                              style={{ background: 'var(--surface-2)', borderColor: 'var(--border)' }}
+                            />
+                            <input
+                              type="text"
+                              placeholder={`Option ${optIndex + 1}`}
+                              value={opt}
+                              onChange={(e) => {
+                                const updated = [...manualQuestions];
+                                updated[qIndex].options[optIndex] =
+                                  e.target.value;
+                                setManualQuestions(updated);
+                              }}
+                              className="w-full p-2 border rounded-md theme-transition"
+                              style={{ background: 'var(--surface-2)', borderColor: 'var(--border)', color: 'var(--text)' }}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        <label className="block">
+                          <span style={{ color: 'var(--text-muted)' }}>Correct Answer (Text)</span>
                           <input
                             type="text"
-                            placeholder={`Option ${optIndex + 1}`}
-                            value={opt}
+                            placeholder="Enter the correct answer"
+                            value={q.correctTextAnswer || ""}
                             onChange={(e) => {
                               const updated = [...manualQuestions];
-                              updated[qIndex].options[optIndex] =
-                                e.target.value;
+                              updated[qIndex].correctTextAnswer = e.target.value;
                               setManualQuestions(updated);
                             }}
                             className="w-full p-2 border rounded-md theme-transition"
                             style={{ background: 'var(--surface-2)', borderColor: 'var(--border)', color: 'var(--text)' }}
                           />
-                        </div>
-                      ))}
-                    </div>
+                        </label>
+                        <p className="text-sm italic" style={{ color: 'var(--text-muted)' }}>
+                          Students will need to type this answer exactly (case-insensitive) to get points.
+                        </p>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -583,11 +641,7 @@ const TeacherDashboard = () => {
                   onClick={() =>
                     setManualQuestions((prev: any) => [
                       ...prev,
-                      {
-                        questionText: "",
-                        options: ["", "", "", ""],
-                        correctAnswerIndex: 0,
-                      },
+                      { questionText: "", type: 'multiple-choice', options: ["", "", "", ""], correctAnswerIndex: 0, correctTextAnswer: "" },
                     ])
                   }
                 >

@@ -4,6 +4,7 @@ const StudentAnswerSchema = mongoose.Schema({
   questionId: { type: mongoose.Schema.Types.ObjectId, ref: "Question" },
   studentId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
   answerIndex: { type: Number },
+  answerText: { type: String },
   submittedAt: { type: Date, default: Date.now },
 });
 

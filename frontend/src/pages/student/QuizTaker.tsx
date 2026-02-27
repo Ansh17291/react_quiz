@@ -19,6 +19,7 @@ const QuizTaker = () => {
   const [selectedAnswers, setSelectedAnswers] = useState<
     Record<string, number>
   >({});
+  const [textAnswers, setTextAnswers] = useState<Record<string, string>>({});
   const [timeLeft, setTimeLeft] = useState(0);
   const [startTime, setStartTime] = useState(0);
   const [activeQuestions, setActiveQuestions] = useState<Question[]>([]);
@@ -31,6 +32,25 @@ const QuizTaker = () => {
     if (!quiz || !currentUser || activeQuestions.length === 0) return;
 
     const studentAnswers: StudentAnswer[] = activeQuestions.map((q) => {
+      const isTextQuestion = q.type === 'text';
+
+      if (isTextQuestion) {
+        const textAnswer = textAnswers[q.id] || "";
+        const original = (quiz.questionPool || []).find(
+          (orig: any) => (orig._id || orig.id) === q.id
+        );
+
+        const isCorrect = original && original.correctTextAnswer
+          ? textAnswer.trim().toLowerCase() === original.correctTextAnswer.trim().toLowerCase()
+          : false;
+
+        return {
+          questionId: q.id,
+          textAnswer,
+          isCorrect,
+        };
+      }
+
       const selectedOptionIndexShuffled = selectedAnswers[q.id] ?? -1;
 
       // Map the selected option back to the ORIGINAL quiz option index
@@ -81,6 +101,7 @@ const QuizTaker = () => {
     currentUser,
     activeQuestions,
     selectedAnswers,
+    textAnswers,
     startTime,
     addResult,
     navigate,
@@ -234,6 +255,10 @@ const QuizTaker = () => {
     setSelectedAnswers((prev) => ({ ...prev, [questionId]: optionIndex }));
   };
 
+  const handleTextAnswerChange = (questionId: string, text: string) => {
+    setTextAnswers((prev) => ({ ...prev, [questionId]: text }));
+  };
+
   const toggleMarkForReview = (questionId: string) => {
     setMarkedForReview((prev) => ({
       ...prev,
@@ -324,23 +349,38 @@ const QuizTaker = () => {
           <p className="text-lg mb-6">{currentQuestion.questionText}</p>
 
           <div className="space-y-3">
-            {currentQuestion.options.map((option, index) => (
-              <button
-                key={index}
-                onClick={() => handleAnswerSelect(currentQuestion.id, index)}
-                className={`w-full text-left p-4 rounded-lg border-2 transition-colors ${selectedAnswers[currentQuestion.id] === index
+            {currentQuestion.type === 'text' ? (
+              <div className="space-y-2">
+                <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text-muted)' }}>
+                  Your Answer:
+                </label>
+                <textarea
+                  value={textAnswers[currentQuestion.id] || ""}
+                  onChange={(e) => handleTextAnswerChange(currentQuestion.id, e.target.value)}
+                  className="w-full h-32 p-4 rounded-lg border-2 theme-transition focus:ring-primary-500 focus:border-primary-500 custom-scrollbar"
+                  style={{ background: 'var(--surface-2)', borderColor: 'var(--border)', color: 'var(--text)' }}
+                  placeholder="Type your answer here..."
+                />
+              </div>
+            ) : (
+              currentQuestion.options.map((option, index) => (
+                <button
+                  key={index}
+                  onClick={() => handleAnswerSelect(currentQuestion.id, index)}
+                  className={`w-full text-left p-4 rounded-lg border-2 transition-colors ${selectedAnswers[currentQuestion.id] === index
                     ? "bg-primary-900 border-primary-500"
                     : "border-transparent"
-                  }`}
-                style={
-                  selectedAnswers[currentQuestion.id] === index
-                    ? {}
-                    : { background: 'var(--surface-2)', color: 'var(--text)' }
-                }
-              >
-                {option}
-              </button>
-            ))}
+                    }`}
+                  style={
+                    selectedAnswers[currentQuestion.id] === index
+                      ? {}
+                      : { background: 'var(--surface-2)', color: 'var(--text)' }
+                  }
+                >
+                  {option}
+                </button>
+              ))
+            )}
             <div className="mt-6">
               <Button
                 variant="secondary"
@@ -356,7 +396,9 @@ const QuizTaker = () => {
             <h4 className="font-semibold mb-2">Question Navigator</h4>
             <div className="grid grid-cols-5 gap-2">
               {activeQuestions.map((q, idx) => {
-                const attempted = Number.isInteger(selectedAnswers[q.id]);
+                const attempted = q.type === 'text'
+                  ? textAnswers[q.id]?.trim().length > 0
+                  : Number.isInteger(selectedAnswers[q.id]);
                 const isCurrent = idx === currentQuestionIndex;
                 const isMarked = !!markedForReview[q.id];
                 return (

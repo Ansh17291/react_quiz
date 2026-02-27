@@ -311,6 +311,7 @@ app.get("/api/quizzes", async (req, res) => {
       ...ques,
       questionText: decryptString(ques.questionText),
       options: (ques.options || []).map((o) => decryptString(o)),
+      correctTextAnswer: ques.correctTextAnswer ? decryptString(ques.correctTextAnswer) : undefined,
     })),
   }));
   res.json(decrypted);
@@ -359,8 +360,10 @@ app.post("/api/quizzes", async (req, res) => {
       (quiz.questions || []).map(async (q) => {
         const created = await Question.create({
           questionText: encryptString(q.questionText),
+          type: q.type || 'multiple-choice',
           options: (q.options || []).map((opt) => encryptString(opt)),
           correctAnswerIndex: q.correctAnswerIndex,
+          correctTextAnswer: q.correctTextAnswer ? encryptString(q.correctTextAnswer) : undefined,
         });
         return created._id;
       })
@@ -527,6 +530,7 @@ app.get("/api/quizzes", async (req, res) => {
         ...ques,
         questionText: decryptString(ques.questionText),
         options: (ques.options || []).map((o) => decryptString(o)),
+        correctTextAnswer: ques.correctTextAnswer ? decryptString(ques.correctTextAnswer) : undefined,
       })),
     }));
     res.json(decrypted);

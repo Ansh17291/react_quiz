@@ -6,6 +6,8 @@ export const Roles = {
 
 export type Role = typeof Roles[keyof typeof Roles];
 
+export type Difficulty = 'Easy' | 'Medium' | 'Hard';
+
 export interface User {
   _id: string;
   id: string;
@@ -18,8 +20,10 @@ export interface User {
 export interface Question {
   id: string;
   questionText: string;
+  type?: 'multiple-choice' | 'text';
   options: string[];
   correctAnswerIndex: number;
+  correctTextAnswer?: string;
 }
 
 export interface Quiz {
@@ -45,7 +49,8 @@ export interface QuizAssignment {
 
 export interface StudentAnswer {
   questionId: string;
-  selectedOptionIndex: number;
+  selectedOptionIndex?: number;
+  textAnswer?: string;
   isCorrect: boolean;
 }
 
