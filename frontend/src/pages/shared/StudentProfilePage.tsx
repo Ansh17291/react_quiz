@@ -45,7 +45,7 @@ const StudentProfilePage = () => {
       try {
         const results = await api.getResults();
         const userResults = (results || []).filter(
-          (r: any) => r.userId === studentId
+          (r: any) => String(r.userId) === String(studentId)
         );
         const sortedResults = userResults.sort(
           (a: any, b: any) =>
@@ -113,7 +113,7 @@ const StudentProfilePage = () => {
 
     const calculatedGrade = Math.round(
       studentResults.reduce((acc, r) => acc + r.score, 0) /
-        studentResults.length
+      studentResults.length
     );
     setGrade(calculatedGrade);
 
@@ -121,15 +121,17 @@ const StudentProfilePage = () => {
 
     studentResults.forEach((res) => {
       const quiz = quizzes.find(
-        (q) => q._id === res.quizId || q.id === res.quizId
+        (q) => String(q._id) === String(res.quizId) || String(q.id) === String(res.quizId)
       );
-      if (quiz && quiz.questionPool && quiz.questionPool.length > 0) {
+      if (quiz) {
         if (!topicCounter[quiz.title]) {
           topicCounter[quiz.title] = { correct: 0, total: 0 };
         }
-        const correctCount = Math.round((res.score / 100) * res.answers.length);
-        topicCounter[quiz.title].correct += correctCount;
-        topicCounter[quiz.title].total += res.answers.length;
+        if (res.answers && res.answers.length > 0) {
+          const correctCount = Math.round((res.score / 100) * res.answers.length);
+          topicCounter[quiz.title].correct += correctCount;
+          topicCounter[quiz.title].total += res.answers.length;
+        }
       }
     });
 
@@ -162,8 +164,8 @@ const StudentProfilePage = () => {
     grade > 80
       ? "text-green-400"
       : grade > 60
-      ? "text-yellow-400"
-      : "text-red-400";
+        ? "text-yellow-400"
+        : "text-red-400";
 
   return (
     <AnimatedWrapper className="max-w-4xl mx-auto space-y-6">

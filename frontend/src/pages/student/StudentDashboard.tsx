@@ -7,7 +7,8 @@ import {
   AnimatedWrapper,
   StaggeredList,
 } from "../../components/shared/AnimatedComponents";
-import { Button, Card } from "../../components/ui";
+import { Button, Card, Modal } from "../../components/ui";
+import Calendar from "../../components/shared/Calendar";
 import {
   CalendarIcon,
   TrophyIcon,
@@ -30,6 +31,7 @@ const StudentDashboard = () => {
   const [quizzes, setQuizzes] = React.useState<any[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
+  const [isCalendarModalOpen, setIsCalendarModalOpen] = React.useState(false);
 
   // Get the correct user ID (handle both _id and id)
   const currentUserId = currentUser?._id || currentUser?.id;
@@ -56,6 +58,39 @@ const StudentDashboard = () => {
         .findIndex((u) => (u._id || u.id) === currentUserId) + 1
     );
   }, [users, currentUserId]);
+
+  const { strengths, weaknesses } = React.useMemo(() => {
+    if (!studentResults.length || !quizzes.length) return { strengths: [], weaknesses: [] };
+
+    const topicCounter: Record<string, { correct: number; total: number }> = {};
+
+    studentResults.forEach((res) => {
+      const quiz = quizzes.find(
+        (q) => String(q._id) === String(res.quizId) || String(q.id) === String(res.quizId)
+      );
+      if (quiz) {
+        if (!topicCounter[quiz.title]) {
+          topicCounter[quiz.title] = { correct: 0, total: 0 };
+        }
+        // If answers array is empty (heatmap dummy data), skip for calculation
+        if (res.answers && res.answers.length > 0) {
+          const correctCount = Math.round((res.score / 100) * res.answers.length);
+          topicCounter[quiz.title].correct += correctCount;
+          topicCounter[quiz.title].total += res.answers.length;
+        }
+      }
+    });
+
+    const s = Object.entries(topicCounter)
+      .filter(([, v]) => v.total > 0 && v.correct / v.total >= 0.8)
+      .map(([k]) => k);
+
+    const w = Object.entries(topicCounter)
+      .filter(([, v]) => v.total > 0 && v.correct / v.total < 0.7)
+      .map(([k]) => k);
+
+    return { strengths: s, weaknesses: w };
+  }, [studentResults, quizzes]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -146,13 +181,43 @@ const StudentDashboard = () => {
     };
   }, [currentUserId, addToast]);
 
+  const calendarEvents = React.useMemo(() => {
+    return studentAssignments.map(assignment => {
+      const quiz = quizzes.find(q => String(q._id) === String(assignment.quizId));
+      return {
+        date: new Date(assignment.deadline),
+        title: quiz ? `Quiz: ${quiz.title}` : 'Quiz Deadline',
+        type: 'quiz' as const,
+        onClick: () => {
+          if (quiz) {
+            const isTaken = studentResults.some(r => String(r.quizId) === String(quiz._id));
+            if (isTaken) {
+              navigate(`/results/${quiz._id}`);
+            } else {
+              navigate(`/quiz/${assignment._id}`);
+            }
+          }
+        }
+      };
+    });
+  }, [studentAssignments, quizzes, studentResults, navigate]);
+
   return (
     <AnimatedWrapper className="space-y-8">
-      <div>
-        <h2 className="text-3xl font-bold" style={{ color: 'var(--text)' }}>
-          Welcome back, {currentUser?.name}!
-        </h2>
-        <p style={{ color: 'var(--text-muted)' }}>Ready to conquer some quizzes today?</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-3xl font-bold" style={{ color: 'var(--text)' }}>
+            Welcome back, {currentUser?.name}!
+          </h2>
+          <p style={{ color: 'var(--text-muted)' }}>Ready to conquer some quizzes today?</p>
+        </div>
+        <Button
+          onClick={() => setIsCalendarModalOpen(true)}
+          variant="secondary"
+        >
+          <CalendarIcon className="w-5 h-5" />
+          View Calendar
+        </Button>
       </div>
       <div className="grid lg:grid-cols-3 gap-6 items-stretch">
         <div className="lg:col-span-2 flex flex-col gap-6">
@@ -250,6 +315,17 @@ const StudentDashboard = () => {
             <h3 className="text-xl font-semibold mb-4" style={{ color: 'var(--text)' }}>Your Activity</h3>
             <ContributionHeatmap results={studentResults} />
           </Card>
+
+          {/* Calendar Modal */}
+          <Modal
+            isOpen={isCalendarModalOpen}
+            onClose={() => setIsCalendarModalOpen(false)}
+            title="Quiz Deadlines"
+          >
+            <div className="p-0 overflow-hidden">
+              <Calendar events={calendarEvents} compact={true} />
+            </div>
+          </Modal>
         </div>
         <div className="lg:col-span-1 flex flex-col gap-6">
           <Card className="flex-1">
@@ -273,6 +349,38 @@ const StudentDashboard = () => {
                 icon={<ChartPieIcon />}
               />
             </div>
+          </Card>
+
+          <Card>
+            <h3 className="text-xl font-semibold mb-4" style={{ color: 'var(--text)' }}>Strengths</h3>
+            {strengths.length > 0 ? (
+              <ul className="space-y-2">
+                {strengths.map(s => (
+                  <li key={s} className="flex items-center gap-2 text-green-400">
+                    <span className="w-2 h-2 rounded-full bg-green-400"></span>
+                    {s}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-sm" style={{ color: 'var(--text-muted)' }}>No strengths identified yet.</p>
+            )}
+          </Card>
+
+          <Card>
+            <h3 className="text-xl font-semibold mb-4" style={{ color: 'var(--text)' }}>Weaknesses</h3>
+            {weaknesses.length > 0 ? (
+              <ul className="space-y-2">
+                {weaknesses.map(w => (
+                  <li key={w} className="flex items-center gap-2 text-red-400">
+                    <span className="w-2 h-2 rounded-full bg-red-400"></span>
+                    {w}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-sm" style={{ color: 'var(--text-muted)' }}>No weaknesses identified yet.</p>
+            )}
           </Card>
         </div>
       </div>
