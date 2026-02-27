@@ -34,54 +34,56 @@ const AdminHistoryPage = () => {
       {error && (
         <div className="p-3 bg-red-500/20 text-red-400 rounded">{error}</div>
       )}
-      {quizzes.map((q) => {
-        const list = quizIdToResults[q._id || q.id] || [];
-        return (
-          <Card key={q._id || q.id}>
-            <div className="flex items-center justify-between">
-              <h3 className="text-xl font-semibold">{q.title}</h3>
-              <span className="text-sm text-slate-400">
-                {q.questionPool?.length || 0} questions
-              </span>
-            </div>
-            <div className="mt-4">
-              {list.length === 0 ? (
-                <p className="text-slate-400">No attempts yet.</p>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="min-w-full text-sm">
-                    <thead>
-                      <tr className="text-left text-slate-300">
-                        <th className="py-2 pr-4">User</th>
-                        <th className="py-2 pr-4">Score</th>
-                        <th className="py-2 pr-4">Time</th>
-                        <th className="py-2 pr-4">Submitted</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {list.map((r, idx) => (
-                        <tr key={idx} className="border-t border-slate-700">
-                          <td className="py-2 pr-4">{r.userId}</td>
-                          <td className="py-2 pr-4 font-semibold">
-                            {r.score}%
-                          </td>
-                          <td className="py-2 pr-4">
-                            {Math.floor((r.timeTaken || 0) / 60)}m{" "}
-                            {(r.timeTaken || 0) % 60}s
-                          </td>
-                          <td className="py-2 pr-4">
-                            {new Date(r.submittedAt).toLocaleString()}
-                          </td>
+      <div className="max-h-[800px] overflow-y-auto pr-2 custom-scrollbar">
+        {quizzes.map((q) => {
+          const list = quizIdToResults[q._id || q.id] || [];
+          return (
+            <Card key={q._id || q.id} className="mb-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xl font-semibold">{q.title}</h3>
+                <span className="text-sm text-slate-400">
+                  {q.questionPool?.length || 0} questions
+                </span>
+              </div>
+              <div className="mt-4">
+                {list.length === 0 ? (
+                  <p className="text-slate-400">No attempts yet.</p>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full text-sm">
+                      <thead>
+                        <tr className="text-left text-slate-300">
+                          <th className="py-2 pr-4">User</th>
+                          <th className="py-2 pr-4">Score</th>
+                          <th className="py-2 pr-4">Time</th>
+                          <th className="py-2 pr-4">Submitted</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-          </Card>
-        );
-      })}
+                      </thead>
+                      <tbody>
+                        {list.map((r, idx) => (
+                          <tr key={idx} className="border-t border-slate-700">
+                            <td className="py-2 pr-4">{r.userId}</td>
+                            <td className="py-2 pr-4 font-semibold">
+                              {r.score}%
+                            </td>
+                            <td className="py-2 pr-4">
+                              {Math.floor((r.timeTaken || 0) / 60)}m{" "}
+                              {(r.timeTaken || 0) % 60}s
+                            </td>
+                            <td className="py-2 pr-4">
+                              {new Date(r.submittedAt).toLocaleString()}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            </Card>
+          );
+        })}
+      </div>
     </AnimatedWrapper>
   );
 };

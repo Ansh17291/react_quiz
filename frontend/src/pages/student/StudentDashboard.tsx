@@ -59,38 +59,7 @@ const StudentDashboard = () => {
     );
   }, [users, currentUserId]);
 
-  const { strengths, weaknesses } = React.useMemo(() => {
-    if (!studentResults.length || !quizzes.length) return { strengths: [], weaknesses: [] };
 
-    const topicCounter: Record<string, { correct: number; total: number }> = {};
-
-    studentResults.forEach((res) => {
-      const quiz = quizzes.find(
-        (q) => String(q._id) === String(res.quizId) || String(q.id) === String(res.quizId)
-      );
-      if (quiz) {
-        if (!topicCounter[quiz.title]) {
-          topicCounter[quiz.title] = { correct: 0, total: 0 };
-        }
-        // If answers array is empty (heatmap dummy data), skip for calculation
-        if (res.answers && res.answers.length > 0) {
-          const correctCount = Math.round((res.score / 100) * res.answers.length);
-          topicCounter[quiz.title].correct += correctCount;
-          topicCounter[quiz.title].total += res.answers.length;
-        }
-      }
-    });
-
-    const s = Object.entries(topicCounter)
-      .filter(([, v]) => v.total > 0 && v.correct / v.total >= 0.8)
-      .map(([k]) => k);
-
-    const w = Object.entries(topicCounter)
-      .filter(([, v]) => v.total > 0 && v.correct / v.total < 0.7)
-      .map(([k]) => k);
-
-    return { strengths: s, weaknesses: w };
-  }, [studentResults, quizzes]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -232,58 +201,60 @@ const StudentDashboard = () => {
                 {error}
               </div>
             ) : studentAssignments.length > 0 ? (
-              <StaggeredList className="space-y-3">
-                {studentAssignments.map((assignment) => {
-                  const quiz = quizzes.find((q) => String(q._id) === String(assignment.quizId));
-                  const isTaken = studentResults.some(
-                    (r) => String(r.quizId) === String(quiz?._id)
-                  );
-                  const isExpired = new Date(assignment.deadline) < new Date();
-                  if (!quiz) return null;
-                  return (
-                    <div
-                      key={assignment._id || assignment.id}
-                      className="p-4 rounded-lg flex justify-between items-center transition-all duration-150 ease-out hover:scale-[1.01] theme-transition"
-                      style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}
-                    >
-                      <div>
-                        <p className="font-semibold text-lg" style={{ color: 'var(--text)' }}>
-                          {quiz.title}{" "}
-                          {assignment.isLive && (
-                            <span className="text-xs font-medium text-red-400 bg-red-900/50 px-2 py-0.5 rounded-full ml-2">
-                              LIVE
-                            </span>
-                          )}
-                        </p>
-                        <p className="text-sm flex items-center gap-1.5 mt-1" style={{ color: 'var(--text-muted)' }}>
-                          <CalendarIcon className="w-4 h-4" /> Deadline:{" "}
-                          {new Date(assignment.deadline).toLocaleDateString()}
-                        </p>
+              <div className="max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+                <StaggeredList className="space-y-3">
+                  {studentAssignments.map((assignment) => {
+                    const quiz = quizzes.find((q) => String(q._id) === String(assignment.quizId));
+                    const isTaken = studentResults.some(
+                      (r) => String(r.quizId) === String(quiz?._id)
+                    );
+                    const isExpired = new Date(assignment.deadline) < new Date();
+                    if (!quiz) return null;
+                    return (
+                      <div
+                        key={assignment._id || assignment.id}
+                        className="p-4 rounded-lg flex justify-between items-center transition-all duration-150 ease-out hover:scale-[1.01] theme-transition"
+                        style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}
+                      >
+                        <div>
+                          <p className="font-semibold text-lg" style={{ color: 'var(--text)' }}>
+                            {quiz.title}{" "}
+                            {assignment.isLive && (
+                              <span className="text-xs font-medium text-red-400 bg-red-900/50 px-2 py-0.5 rounded-full ml-2">
+                                LIVE
+                              </span>
+                            )}
+                          </p>
+                          <p className="text-sm flex items-center gap-1.5 mt-1" style={{ color: 'var(--text-muted)' }}>
+                            <CalendarIcon className="w-4 h-4" /> Deadline:{" "}
+                            {new Date(assignment.deadline).toLocaleDateString()}
+                          </p>
+                        </div>
+                        {isTaken ? (
+                          <Button
+                            onClick={() => navigate(`/results/${quiz._id}`)}
+                            variant="secondary"
+                          >
+                            Review
+                          </Button>
+                        ) : isExpired ? (
+                          <span className="px-3 py-1 text-xs font-semibold text-red-200 bg-red-800 rounded-full">
+                            Expired
+                          </span>
+                        ) : (
+                          <Button
+                            onClick={() => {
+                              navigate(`/quiz/${assignment._id}`);
+                            }}
+                          >
+                            {assignment.isLive ? "Join Live Quiz" : "Start Quiz"}
+                          </Button>
+                        )}
                       </div>
-                      {isTaken ? (
-                        <Button
-                          onClick={() => navigate(`/results/${quiz._id}`)}
-                          variant="secondary"
-                        >
-                          Review
-                        </Button>
-                      ) : isExpired ? (
-                        <span className="px-3 py-1 text-xs font-semibold text-red-200 bg-red-800 rounded-full">
-                          Expired
-                        </span>
-                      ) : (
-                        <Button
-                          onClick={() => {
-                            navigate(`/quiz/${assignment._id}`);
-                          }}
-                        >
-                          {assignment.isLive ? "Join Live Quiz" : "Start Quiz"}
-                        </Button>
-                      )}
-                    </div>
-                  );
-                })}
-              </StaggeredList>
+                    );
+                  })}
+                </StaggeredList>
+              </div>
             ) : (
               <p className="text-center py-4" style={{ color: 'var(--text-muted)' }}>
                 No quizzes assigned yet. Check back later!
@@ -293,19 +264,21 @@ const StudentDashboard = () => {
           <Card>
             <h3 className="text-xl font-semibold mb-4" style={{ color: 'var(--text)' }}>Assigned Polls</h3>
             {assignedPolls.length > 0 ? (
-              <div className="space-y-3">
-                {assignedPolls.map((p) => (
-                  <div key={p._id || p.id} className="p-4 rounded-lg flex justify-between items-center theme-transition"
-                    style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
-                    <div>
-                      <div className="font-semibold" style={{ color: 'var(--text)' }}>{p.title || `Poll`}</div>
-                      <div className="text-sm" style={{ color: 'var(--text-muted)' }}>{(p.questions || []).map((q: any) => q.questionText).slice(0, 2).join(' • ')}{(p.questions || []).length > 2 ? ' ...' : ''}</div>
+              <div className="max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
+                <div className="space-y-3">
+                  {assignedPolls.map((p) => (
+                    <div key={p._id || p.id} className="p-4 rounded-lg flex justify-between items-center theme-transition"
+                      style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
+                      <div>
+                        <div className="font-semibold" style={{ color: 'var(--text)' }}>{p.title || `Poll`}</div>
+                        <div className="text-sm" style={{ color: 'var(--text-muted)' }}>{(p.questions || []).map((q: any) => q.questionText).slice(0, 2).join(' • ')}{(p.questions || []).length > 2 ? ' ...' : ''}</div>
+                      </div>
+                      <div>
+                        <Button onClick={() => navigate(`/poll/${p._id || p.id}`)}>Open Poll</Button>
+                      </div>
                     </div>
-                    <div>
-                      <Button onClick={() => navigate(`/poll/${p._id || p.id}`)}>Open Poll</Button>
-                    </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
             ) : (
               <p style={{ color: 'var(--text-muted)' }}>No polls assigned.</p>
@@ -351,37 +324,7 @@ const StudentDashboard = () => {
             </div>
           </Card>
 
-          <Card>
-            <h3 className="text-xl font-semibold mb-4" style={{ color: 'var(--text)' }}>Strengths</h3>
-            {strengths.length > 0 ? (
-              <ul className="space-y-2">
-                {strengths.map(s => (
-                  <li key={s} className="flex items-center gap-2 text-green-400">
-                    <span className="w-2 h-2 rounded-full bg-green-400"></span>
-                    {s}
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="text-sm" style={{ color: 'var(--text-muted)' }}>No strengths identified yet.</p>
-            )}
-          </Card>
 
-          <Card>
-            <h3 className="text-xl font-semibold mb-4" style={{ color: 'var(--text)' }}>Weaknesses</h3>
-            {weaknesses.length > 0 ? (
-              <ul className="space-y-2">
-                {weaknesses.map(w => (
-                  <li key={w} className="flex items-center gap-2 text-red-400">
-                    <span className="w-2 h-2 rounded-full bg-red-400"></span>
-                    {w}
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="text-sm" style={{ color: 'var(--text-muted)' }}>No weaknesses identified yet.</p>
-            )}
-          </Card>
         </div>
       </div>
     </AnimatedWrapper>

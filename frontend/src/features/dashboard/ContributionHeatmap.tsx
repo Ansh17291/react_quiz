@@ -101,7 +101,7 @@ export const ContributionHeatmap = ({ results }: { results: QuizResult[] }) => {
         <div className="h-4"></div>
       </div>
 
-      <div className="overflow-x-auto w-full">
+      <div className="overflow-x-auto w-full custom-scrollbar">
         {/* Month Labels */}
         <div
           className={`grid grid-cols-[repeat(${numCols},minmax(0,1fr))] gap-1 mb-1`}

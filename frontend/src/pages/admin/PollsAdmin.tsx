@@ -319,7 +319,7 @@ const PollsAdmin: React.FC = () => {
                         <p className="text-lg" style={{ color: 'var(--text-muted)' }}>No polls yet. Create one to get started!</p>
                     </Card>
                 ) : (
-                    <div className="grid grid-cols-1 gap-4">
+                    <div className="grid grid-cols-1 gap-4 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
                         {polls.map((p) => {
                             const sess = sessions[p._id || p.id];
                             const isLive = sess && sess.active;

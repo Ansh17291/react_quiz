@@ -204,7 +204,7 @@ const AdminQuizzesPage: React.FC = () => {
       ) : error ? (
         <p className="text-red-400">{error}</p>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid gap-4 md:grid-cols-2 max-h-[700px] overflow-y-auto pr-2 custom-scrollbar">
           {quizzesList.map((q: any) => (
             <Card key={q._id}>
               <div className="flex items-start justify-between gap-4">

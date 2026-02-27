@@ -14,8 +14,7 @@ const StudentProfilePage = () => {
   const [studentResults, setStudentResults] = useState<any[]>([]);
   const [studentPosts, setStudentPosts] = useState<any[]>([]);
   const [quizzes, setQuizzes] = useState<any[]>([]);
-  const [strengths, setStrengths] = useState<string[]>([]);
-  const [weaknesses, setWeaknesses] = useState<string[]>([]);
+
   const [grade, setGrade] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -135,16 +134,7 @@ const StudentProfilePage = () => {
       }
     });
 
-    const calculatedStrengths = Object.entries(topicCounter)
-      .filter(([, v]) => v.total > 0 && v.correct / v.total >= 0.8)
-      .map(([k]) => k);
 
-    const calculatedWeaknesses = Object.entries(topicCounter)
-      .filter(([, v]) => v.total > 0 && v.correct / v.total < 0.7)
-      .map(([k]) => k);
-
-    setStrengths(calculatedStrengths);
-    setWeaknesses(calculatedWeaknesses);
     setIsLoading(false);
   }, [student, studentResults, quizzes]);
 
@@ -176,36 +166,7 @@ const StudentProfilePage = () => {
             Overall Grade: <span className={gradeColor}>{grade}/100</span>
           </p>
         </div>
-        <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <h4 className="text-xl font-bold text-green-400 mb-2">Strengths</h4>
-            {strengths.length > 0 ? (
-              <ul className="list-disc list-inside space-y-1">
-                {strengths.map((s) => (
-                  <li key={s}>{s}</li>
-                ))}
-              </ul>
-            ) : (
-              <p className="text-slate-400">
-                No specific strengths identified yet.
-              </p>
-            )}
-          </div>
-          <div>
-            <h4 className="text-xl font-bold text-red-400 mb-2">Weaknesses</h4>
-            {weaknesses.length > 0 ? (
-              <ul className="list-disc list-inside space-y-1">
-                {weaknesses.map((w) => (
-                  <li key={w}>{w}</li>
-                ))}
-              </ul>
-            ) : (
-              <p className="text-slate-400">
-                No specific weaknesses identified yet.
-              </p>
-            )}
-          </div>
-        </div>
+
       </Card>
       <Card>
         <h3 className="text-2xl font-semibold mb-4">Activity</h3>
@@ -215,29 +176,31 @@ const StudentProfilePage = () => {
         <Card>
           <h3 className="text-2xl font-semibold mb-4">Quiz History</h3>
           {studentResults.length > 0 ? (
-            <div className="space-y-3">
-              {studentResults.map((result) => {
-                const quiz = quizzes.find(
-                  (q) => q._id === result.quizId || q.id === result.quizId
-                );
-                return (
-                  <div
-                    key={result.submittedAt}
-                    className="p-3 bg-slate-800 rounded-lg flex justify-between items-center"
-                  >
-                    <div>
-                      <p className="font-bold">
-                        {quiz?.title || "Unknown Quiz"}
-                      </p>
-                      <p className="text-sm text-slate-400">
-                        Taken on:{" "}
-                        {new Date(result.submittedAt).toLocaleDateString()}
-                      </p>
+            <div className="max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+              <div className="space-y-3">
+                {studentResults.map((result) => {
+                  const quiz = quizzes.find(
+                    (q) => q._id === result.quizId || q.id === result.quizId
+                  );
+                  return (
+                    <div
+                      key={result.submittedAt}
+                      className="p-3 bg-slate-800 rounded-lg flex justify-between items-center"
+                    >
+                      <div>
+                        <p className="font-bold">
+                          {quiz?.title || "Unknown Quiz"}
+                        </p>
+                        <p className="text-sm text-slate-400">
+                          Taken on:{" "}
+                          {new Date(result.submittedAt).toLocaleDateString()}
+                        </p>
+                      </div>
+                      <p className="font-bold text-lg">{result.score}/100</p>
                     </div>
-                    <p className="font-bold text-lg">{result.score}/100</p>
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
             </div>
           ) : (
             <p className="text-slate-400">No quizzes taken yet.</p>
@@ -248,19 +211,21 @@ const StudentProfilePage = () => {
             Recent Discussion Posts
           </h3>
           {studentPosts.length > 0 ? (
-            <div className="space-y-3">
-              {studentPosts.map((post) => (
-                <Link
-                  to={`/discussions/${post._id || post.id}`}
-                  key={post._id || post.id}
-                  className="block p-3 bg-slate-800 rounded-lg hover:bg-slate-700 transition-colors"
-                >
-                  <p className="font-bold truncate">{post.title}</p>
-                  <p className="text-sm text-slate-400">
-                    Posted on: {new Date(post.createdAt).toLocaleDateString()}
-                  </p>
-                </Link>
-              ))}
+            <div className="max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+              <div className="space-y-3">
+                {studentPosts.map((post) => (
+                  <Link
+                    to={`/discussions/${post._id || post.id}`}
+                    key={post._id || post.id}
+                    className="block p-3 bg-slate-800 rounded-lg hover:bg-slate-700 transition-colors"
+                  >
+                    <p className="font-bold truncate">{post.title}</p>
+                    <p className="text-sm text-slate-400">
+                      Posted on: {new Date(post.createdAt).toLocaleDateString()}
+                    </p>
+                  </Link>
+                ))}
+              </div>
             </div>
           ) : (
             <p className="text-slate-400">No discussion posts yet.</p>

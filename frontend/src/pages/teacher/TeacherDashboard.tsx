@@ -253,30 +253,32 @@ const TeacherDashboard = () => {
             <h3 className="text-xl font-semibold mb-4">
               Class Leaderboard (by Points)
             </h3>
-            <StaggeredList className="space-y-2">
-              {leaderboard.map((student, index) => (
-                <div
-                  key={student.id}
-                  className="flex justify-between items-center p-3 rounded-lg hover:bg-[var(--surface-2)] cursor-pointer transition-colors theme-transition"
-                  style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}
-                  onClick={() => navigate(`/student/${student.id}`)}
-                >
-                  <span className="font-medium flex items-center gap-3">
-                    <span
-                      className={`text-xl w-6 text-center ${index < 3 ? "" : "text-slate-400"
-                        }`}
-                    >
-                      {rankBadges[index] || index + 1}
+            <div className="max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+              <StaggeredList className="space-y-2">
+                {leaderboard.map((student, index) => (
+                  <div
+                    key={student.id}
+                    className="flex justify-between items-center p-3 rounded-lg hover:bg-[var(--surface-2)] cursor-pointer transition-colors theme-transition"
+                    style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}
+                    onClick={() => navigate(`/student/${student.id}`)}
+                  >
+                    <span className="font-medium flex items-center gap-3">
+                      <span
+                        className={`text-xl w-6 text-center ${index < 3 ? "" : "text-slate-400"
+                          }`}
+                      >
+                        {rankBadges[index] || index + 1}
+                      </span>
+                      {student.name}
                     </span>
-                    {student.name}
-                  </span>
-                  <span className="font-bold text-yellow-400 flex items-center gap-1">
-                    <TrophyIcon className="w-5 h-5" />
-                    {student.points}
-                  </span>
-                </div>
-              ))}
-            </StaggeredList>
+                    <span className="font-bold text-yellow-400 flex items-center gap-1">
+                      <TrophyIcon className="w-5 h-5" />
+                      {student.points}
+                    </span>
+                  </div>
+                ))}
+              </StaggeredList>
+            </div>
           </Card>
           <Card>
             <h3 className="text-xl font-semibold mb-4">
@@ -337,70 +339,72 @@ const TeacherDashboard = () => {
                 Add Student
               </Button>
             </div>
-            <StaggeredList className="space-y-2">
-              {students.current.map((student) => (
-                <div
-                  key={student._id}
-                  className="flex justify-between items-center p-3 rounded-lg theme-transition"
-                  style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}
-                >
-                  <span>{student.name}</span>
-                  <div className="flex items-center gap-2">
-                    {editingUserId === student._id ? (
-                      <>
-                        <input
-                          type="password"
-                          placeholder="New password"
-                          className="p-2 rounded border focus:outline-none focus:ring-2 focus:ring-[var(--accent)] theme-transition custom-scrollbar"
-                          style={{ background: 'var(--surface-3)', borderColor: 'var(--border)', color: 'var(--text)' }}
-                          value={newPassword}
-                          onChange={(e) => setNewPassword(e.target.value)}
-                        />
-                        <Button
-                          variant="secondary"
-                          onClick={async () => {
-                            if (!newPassword.trim()) return;
-                            await api.updateUserPassword(
-                              student._id,
-                              newPassword
-                            );
-                            setEditingUserId(null);
-                            setNewPassword("");
-                            addToast("Password updated", "success");
-                          }}
-                        >
-                          Save
-                        </Button>
-                        <Button
-                          variant="secondary"
-                          onClick={() => {
-                            setEditingUserId(null);
-                            setNewPassword("");
-                          }}
-                        >
-                          Cancel
-                        </Button>
-                      </>
-                    ) : (
-                      <>
-                        <Button
-                          variant="secondary"
-                          onClick={() => setEditingUserId(student._id)}
-                        >
-                          Edit Password
-                        </Button>
-                        <Button
-                          variant="danger"
-                          onClick={() => handleRevokeStudent(student._id)}
-                        >
-                          Revoke Access
-                        </Button>
-                      </>
-                    )}
+            <div className="max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
+              <StaggeredList className="space-y-2">
+                {students.current.map((student) => (
+                  <div
+                    key={student._id}
+                    className="flex justify-between items-center p-3 rounded-lg theme-transition"
+                    style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}
+                  >
+                    <span>{student.name}</span>
+                    <div className="flex items-center gap-2">
+                      {editingUserId === student._id ? (
+                        <>
+                          <input
+                            type="password"
+                            placeholder="New password"
+                            className="p-2 rounded border focus:outline-none focus:ring-2 focus:ring-[var(--accent)] theme-transition custom-scrollbar"
+                            style={{ background: 'var(--surface-3)', borderColor: 'var(--border)', color: 'var(--text)' }}
+                            value={newPassword}
+                            onChange={(e) => setNewPassword(e.target.value)}
+                          />
+                          <Button
+                            variant="secondary"
+                            onClick={async () => {
+                              if (!newPassword.trim()) return;
+                              await api.updateUserPassword(
+                                student._id,
+                                newPassword
+                              );
+                              setEditingUserId(null);
+                              setNewPassword("");
+                              addToast("Password updated", "success");
+                            }}
+                          >
+                            Save
+                          </Button>
+                          <Button
+                            variant="secondary"
+                            onClick={() => {
+                              setEditingUserId(null);
+                              setNewPassword("");
+                            }}
+                          >
+                            Cancel
+                          </Button>
+                        </>
+                      ) : (
+                        <>
+                          <Button
+                            variant="secondary"
+                            onClick={() => setEditingUserId(student._id)}
+                          >
+                            Edit Password
+                          </Button>
+                          <Button
+                            variant="danger"
+                            onClick={() => handleRevokeStudent(student._id)}
+                          >
+                            Revoke Access
+                          </Button>
+                        </>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
-            </StaggeredList>
+                ))}
+              </StaggeredList>
+            </div>
           </Card>
         )
       }
