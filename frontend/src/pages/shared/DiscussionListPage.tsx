@@ -139,26 +139,27 @@ const DiscussionListPage = () => {
               return (
                 <div
                   key={postId}
-                  className="p-4 bg-slate-800 rounded-lg flex justify-between items-center hover:bg-slate-700 transition-colors"
+                  className="p-4 rounded-lg flex justify-between items-center hover:scale-[1.01] theme-transition"
+                  style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}
                 >
                   <div
                     className="cursor-pointer"
                     onClick={() => navigate(`/discussions/${postId}`)}
                   >
-                    <h3 className="text-lg font-bold text-primary-400">
+                    <h3 className="text-lg font-bold" style={{ color: 'var(--accent)' }}>
                       {post.title}
                     </h3>
-                    <p className="text-sm text-slate-400">
+                    <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
                       By {author?.name || "Unknown"} on{" "}
                       {new Date(post.createdAt).toLocaleDateString()}
                     </p>
                   </div>
                   <div className="flex items-center gap-4">
                     <div className="text-right">
-                      <p className="font-semibold">
+                      <p className="font-semibold" style={{ color: 'var(--text)' }}>
                         {post.replies?.length || 0}
                       </p>
-                      <p className="text-sm text-slate-400">Replies</p>
+                      <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Replies</p>
                     </div>
                     <Button
                       variant="secondary"
@@ -172,7 +173,7 @@ const DiscussionListPage = () => {
             })}
           </StaggeredList>
         ) : (
-          <p className="text-slate-400 text-center py-8">
+          <p className="text-center py-8" style={{ color: 'var(--text-muted)' }}>
             No discussions yet. Be the first to start one!
           </p>
         )}
@@ -187,7 +188,8 @@ const DiscussionListPage = () => {
           <div>
             <label
               htmlFor="post-title"
-              className="block text-sm font-medium text-slate-300"
+              className="block text-sm font-medium mb-1"
+              style={{ color: 'var(--text-muted)' }}
             >
               Title
             </label>
@@ -196,14 +198,16 @@ const DiscussionListPage = () => {
               id="post-title"
               value={newPostTitle}
               onChange={(e) => setNewPostTitle(e.target.value)}
-              className="mt-1 w-full p-2 border rounded-md bg-slate-700 border-slate-600"
+              className="mt-1 w-full p-2 border rounded-md theme-transition"
+              style={{ background: 'var(--surface-2)', borderColor: 'var(--border)', color: 'var(--text)' }}
               disabled={isSubmitting}
             />
           </div>
           <div>
             <label
               htmlFor="post-content"
-              className="block text-sm font-medium text-slate-300"
+              className="block text-sm font-medium mb-1"
+              style={{ color: 'var(--text-muted)' }}
             >
               Content
             </label>
@@ -212,7 +216,8 @@ const DiscussionListPage = () => {
               value={newPostContent}
               onChange={(e) => setNewPostContent(e.target.value)}
               rows={6}
-              className="mt-1 w-full p-2 border rounded-md bg-slate-700 border-slate-600"
+              className="mt-1 w-full p-2 border rounded-md theme-transition"
+              style={{ background: 'var(--surface-2)', borderColor: 'var(--border)', color: 'var(--text)' }}
               disabled={isSubmitting}
             />
           </div>

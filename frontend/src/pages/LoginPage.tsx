@@ -42,12 +42,14 @@ const LoginPage = () => {
     setIsLoading(true);
     try {
       const user = await axios.post(`${BASE}/api/user/student-login`, { name, password });
-      if (user.data.user) {
-        login(user.data);
-        addToast(`Welcome back, ${user.data.user.name}!`, "success");
-        navigate("/student");
+      login(user.data);
+      addToast(`Welcome back, ${user.data.user.name}!`, "success");
+      navigate("/student");
+    } catch (error: any) {
+      if (error.response?.data?.error) {
+        addToast(error.response.data.error, "error");
       } else {
-        addToast("Invalid credentials or user does not exist.", "error");
+        addToast("Invalid credentials or an error occurred.", "error");
       }
     } finally { setIsLoading(false); }
   };
@@ -58,13 +60,15 @@ const LoginPage = () => {
     setIsLoading(true);
     try {
       const user = await axios.post(`${BASE}/api/user/signup`, { username: name, password });
-      if (user.data?.message === "User exists") {
-        addToast("Another user exists with the same username", "error");
-        return;
-      }
       addToast(`Welcome, ${name}! Your account has been created.`, "success");
       login(user.data);
       navigate("/student");
+    } catch (error: any) {
+      if (error.response?.data?.error) {
+        addToast(error.response.data.error, "error");
+      } else {
+        addToast("Failed to create account.", "error");
+      }
     } finally { setIsLoading(false); }
   };
 
@@ -73,12 +77,14 @@ const LoginPage = () => {
     setIsLoading(true);
     try {
       const user = await axios.post(`${BASE}/api/user/teacher-login`, { name, password });
-      if (user.data.user) {
-        login(user.data);
-        addToast(`Welcome, ${user.data.user.name}!`, "success");
-        navigate(`/${user.data.user.name}`);
+      login(user.data);
+      addToast(`Welcome, ${user.data.user.name}!`, "success");
+      navigate(`/${user.data.user.name}`);
+    } catch (error: any) {
+      if (error.response?.data?.error) {
+        addToast(error.response.data.error, "error");
       } else {
-        addToast("Invalid credentials.", "error");
+        addToast("Invalid credentials or an error occurred.", "error");
       }
     } finally { setIsLoading(false); }
   };

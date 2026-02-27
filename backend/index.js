@@ -72,6 +72,7 @@ const QuizAssignment = require("./Model/QuizAssignment");
 const Poll = require("./Model/Poll");
 const PollSession = require("./Model/PollSession");
 const PollAssignment = require("./Model/PollAssignment");
+const Classroom = require("./Model/Classroom");
 
 // --- Socket.IO Namespaces ---
 const leaderboardNamespace = io.of("/leaderboard");
@@ -140,7 +141,7 @@ app.post("/api/leaderboard/update", async (req, res) => {
   res.status(200).json({ message: "Leaderboard update triggered" });
 });
 
-app.get("/api/assignment", async (req, res) => {
+app.get("/api/assignments", async (req, res) => {
   const assignments = await QuizAssignment.find();
   res.json(assignments);
 });
@@ -286,7 +287,7 @@ app.post("/api/discussions/reply", async (req, res) => {
   }
 });
 
-app.get("/api/assignment/:id", async (req, res) => {
+app.get("/api/assignments/:id", async (req, res) => {
   const assignmentId = req.params.id;
 
   // Example: filter results by assignmentId
@@ -727,17 +728,17 @@ app.delete('/api/polls/:id', authenticateJWT, async (req, res) => {
   try {
     if (!req.user || !['TEACHER', 'ADMIN'].includes(req.user.role)) return res.status(403).json({ error: 'Forbidden' });
     const pollId = req.params.id;
-    
+
     // Delete the poll
     const poll = await Poll.findByIdAndDelete(pollId);
     if (!poll) return res.status(404).json({ error: 'Poll not found' });
-    
+
     // Delete associated sessions
     await PollSession.deleteMany({ pollId });
-    
+
     // Delete associated assignments
     await PollAssignment.deleteMany({ pollId });
-    
+
     res.json({ message: 'Poll deleted successfully' });
   } catch (e) {
     console.error(e);
@@ -883,6 +884,126 @@ app.post("/api/user/signup", async (req, res) => {
     password,
   });
   res.status(200).json(user);
+});
+
+// --- Classrooms ---
+
+// Create classroom (Teacher only)
+app.post("/api/classrooms", authenticateJWT, async (req, res) => {
+  try {
+    if (req.user.role !== "TEACHER" && req.user.role !== "ADMIN") {
+      return res.status(403).json({ error: "Only teachers can create classrooms" });
+    }
+    const { name, description, studentIds } = req.body;
+    if (!name) return res.status(400).json({ error: "Class name is required" });
+
+    // Generate unique class code
+    let classCode;
+    let isUnique = false;
+    while (!isUnique) {
+      classCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+      const existing = await Classroom.findOne({ classCode });
+      if (!existing) isUnique = true;
+    }
+
+    const classroom = await Classroom.create({
+      name,
+      description,
+      teacher: req.user.id,
+      classCode,
+      students: studentIds || [],
+    });
+    res.status(201).json(classroom);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: "Failed to create classroom" });
+  }
+});
+
+// Join classroom (Student only)
+app.post("/api/classrooms/join", authenticateJWT, async (req, res) => {
+  try {
+    const { classCode } = req.body;
+    if (!classCode) return res.status(400).json({ error: "Class code is required" });
+
+    const classroom = await Classroom.findOne({ classCode });
+    if (!classroom) return res.status(404).json({ error: "Classroom not found" });
+
+    // Add student if not already in list
+    if (!classroom.students.includes(req.user.id)) {
+      classroom.students.push(req.user.id);
+      await classroom.save();
+    }
+    res.json(classroom);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: "Failed to join classroom" });
+  }
+});
+
+// List classrooms
+app.get("/api/classrooms", authenticateJWT, async (req, res) => {
+  try {
+    let query = {};
+    if (req.user.role === "TEACHER") {
+      query = { teacher: req.user.id };
+    } else if (req.user.role === "STUDENT") {
+      query = { students: req.user.id };
+    }
+    const classrooms = await Classroom.find(query).populate("teacher", "name").lean();
+    res.json(classrooms);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: "Failed to fetch classrooms" });
+  }
+});
+
+// Get classroom detail
+app.get("/api/classrooms/:id", authenticateJWT, async (req, res) => {
+  try {
+    const classroom = await Classroom.findById(req.params.id)
+      .populate("teacher", "name")
+      .populate("students", "name")
+      .lean();
+    if (!classroom) return res.status(404).json({ error: "Classroom not found" });
+    res.json(classroom);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: "Failed to fetch classroom" });
+  }
+});
+
+// Upload resource for classroom
+app.post("/api/classrooms/:id/resources", authenticateJWT, upload.single("file"), async (req, res) => {
+  try {
+    if (req.user.role !== "TEACHER" && req.user.role !== "ADMIN") {
+      return res.status(403).json({ error: "Only teachers can upload resources" });
+    }
+    if (!req.file) return res.status(400).json({ error: "No file uploaded" });
+
+    const fileUrl = `/uploads/${req.file.filename}`;
+    const resource = await Resource.create({
+      title: req.body.title || req.file.originalname,
+      content: fileUrl,
+      type: "file",
+      classroomId: req.params.id,
+    });
+    res.status(201).json(resource);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: "Upload failed" });
+  }
+});
+
+// Get resources for classroom
+app.get("/api/classrooms/:id/resources", authenticateJWT, async (req, res) => {
+  try {
+    const resources = await Resource.find({ classroomId: req.params.id }).lean();
+    res.json(resources);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: "Failed to fetch resources" });
+  }
 });
 
 // catch-all error handler

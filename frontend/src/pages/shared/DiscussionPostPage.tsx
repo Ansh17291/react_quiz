@@ -125,7 +125,7 @@ const DiscussionPostPage = () => {
     return (
       <AnimatedWrapper className="max-w-4xl mx-auto space-y-6">
         <Card>
-          <div className="p-4 text-red-400 bg-red-500/20 rounded-lg">
+          <div className="p-4 rounded-lg" style={{ color: 'var(--error)', background: 'rgba(239, 68, 68, 0.1)' }}>
             {error}
           </div>
         </Card>
@@ -137,7 +137,7 @@ const DiscussionPostPage = () => {
     return (
       <AnimatedWrapper className="max-w-4xl mx-auto space-y-6">
         <Card>
-          <div className="p-4 text-yellow-400 bg-yellow-500/20 rounded-lg">
+          <div className="p-4 rounded-lg" style={{ color: 'var(--warning)', background: 'rgba(234, 179, 8, 0.1)' }}>
             Post not found or author data missing.
           </div>
         </Card>
@@ -148,17 +148,17 @@ const DiscussionPostPage = () => {
   return (
     <AnimatedWrapper className="max-w-4xl mx-auto space-y-6">
       <Card>
-        <h2 className="text-3xl font-bold">{post.title}</h2>
-        <p className="text-slate-400">
-          Posted by <span className="font-semibold">{author.name}</span> on{" "}
+        <h2 className="text-3xl font-bold" style={{ color: 'var(--text)' }}>{post.title}</h2>
+        <p style={{ color: 'var(--text-muted)' }}>
+          Posted by <span className="font-semibold" style={{ color: 'var(--text)' }}>{author.name}</span> on{" "}
           {new Date(post.createdAt).toLocaleString()}
         </p>
-        <div className="mt-6 prose prose-slate dark:prose-invert max-w-none">
+        <div className="mt-6 max-w-none" style={{ color: 'var(--text)' }}>
           <p>{post.content}</p>
         </div>
       </Card>
       <Card>
-        <h3 className="text-2xl font-semibold mb-4">
+        <h3 className="text-2xl font-semibold mb-4" style={{ color: 'var(--text)' }}>
           Replies ({post.replies.length})
         </h3>
         <div className="space-y-4">
@@ -176,10 +176,11 @@ const DiscussionPostPage = () => {
               return (
                 <div
                   key={(reply as any)._id || reply.id}
-                  className="p-4 bg-slate-800 rounded-lg"
+                  className="p-4 rounded-lg theme-transition"
+                  style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}
                 >
-                  <p className="mb-2">{reply.content}</p>
-                  <p className="text-xs text-slate-400 text-right">
+                  <p className="mb-2" style={{ color: 'var(--text)' }}>{reply.content}</p>
+                  <p className="text-xs text-right" style={{ color: 'var(--text-muted)' }}>
                     -- {replyAuthor?.name || "Unknown"},{" "}
                     {new Date(reply.createdAt as any).toLocaleString()}
                   </p>
@@ -187,21 +188,22 @@ const DiscussionPostPage = () => {
               );
             })}
           {post.replies.length === 0 && (
-            <p className="text-slate-400">
+            <p style={{ color: 'var(--text-muted)' }}>
               No replies yet. Be the first to respond!
             </p>
           )}
         </div>
       </Card>
       <Card>
-        <h3 className="text-2xl font-semibold mb-4">Add Your Reply</h3>
+        <h3 className="text-2xl font-semibold mb-4" style={{ color: 'var(--text)' }}>Add Your Reply</h3>
         <form onSubmit={handleAddReply} className="space-y-2">
           <textarea
             ref={replyTextareaRef}
             value={replyContent}
             onChange={(e) => setReplyContent(e.target.value)}
             rows={4}
-            className="w-full p-2 border rounded-md bg-slate-700 border-slate-600"
+            className="w-full p-2 border rounded-md theme-transition"
+            style={{ background: 'var(--surface-2)', borderColor: 'var(--border)', color: 'var(--text)' }}
             placeholder="Share your thoughts..."
           />
           <div className="text-right">

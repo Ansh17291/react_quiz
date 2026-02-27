@@ -158,12 +158,6 @@ const ClassroomIcon: React.FC<{ className?: string; style?: React.CSSProperties 
   </svg>
 );
 
-const KeyIcon: React.FC<{ className?: string }> = ({ className }) => (
-  <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-      d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
-  </svg>
-);
 
 const AcademicCapIcon: React.FC<{ className?: string; style?: React.CSSProperties }> = ({ className, style }) => (
   <svg className={className} style={style} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -188,6 +182,7 @@ const AnimatedFeatureCard: React.FC<AnimatedFeatureCardProps> = ({
   delay = 200,
 }) => {
   const [isVisible, setIsVisible] = useState(false);
+  const [isActive, setIsActive] = useState(false);
   useEffect(() => {
     const timer = setTimeout(() => setIsVisible(true), delay);
     return () => clearTimeout(timer);
@@ -195,21 +190,54 @@ const AnimatedFeatureCard: React.FC<AnimatedFeatureCardProps> = ({
 
   return (
     <div
-      className={`relative transition-all duration-700 group ${isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"
-        }`}
+      onClick={() => setIsActive(!isActive)}
+      className={`relative transition-all duration-700 group cursor-pointer ${isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}
     >
+      {/* Container with hover and active gradient border wrapper */}
       <div
-        className="p-8 rounded-2xl transition-all duration-300 hover:scale-[1.02] hover:shadow-xl theme-transition"
-        style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}
+        className={`h-full rounded-2xl transition-all duration-300 p-[1.5px] ${isActive ? 'scale-[1.02] shadow-[0_0_30px_-5px_rgba(124,58,237,0.4)]' : 'group-hover:scale-[1.02] group-hover:shadow-xl'}`}
+        style={{
+          background: (isActive ? 'linear-gradient(135deg, #7c3aed 0%, #ec4899 100%)' : 'transparent')
+        }}
       >
-        <div className="flex flex-col items-center text-center">
-          <div className="mb-6 transform group-hover:scale-110 group-hover:rotate-6 transition-all duration-300">
+        {/* Hover Gradient Overlay using CSS class for group-hover */}
+        <div
+          className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"
+          style={{
+            background: 'linear-gradient(135deg, #7c3aed 0%, #ec4899 100%)'
+          }}
+        />
+
+        <div
+          className="relative h-full p-8 rounded-[calc(1rem-1.5px)] overflow-hidden flex flex-col items-center text-center transition-all duration-300 theme-transition"
+          style={{
+            background: 'var(--surface)',
+            border: (isActive ? 'none' : '1px solid var(--border)')
+          }}
+        >
+          {/* Subtle overlay effects for active/hover state */}
+          <div
+            className="absolute inset-0 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-500"
+            style={{
+              background: 'radial-gradient(circle at center top, rgba(124, 58, 237, 0.12) 0%, transparent 70%)',
+            }}
+          />
+          <div
+            className="absolute inset-0 opacity-0 group-hover:opacity-5 pointer-events-none transition-opacity duration-500"
+            style={{
+              backgroundImage: 'linear-gradient(rgba(255,255,255,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.05) 1px, transparent 1px)',
+              backgroundSize: '20px 20px'
+            }}
+          />
+
+          <div className={`relative z-10 mb-6 transform transition-all duration-300 ${isActive ? 'scale-110 drop-shadow-[0_0_10px_rgba(124,58,237,0.5)]' : 'group-hover:scale-110'}`}>
             {icon}
           </div>
-          <h3 className="text-xl font-bold mb-3 transition-colors duration-300" style={{ color: 'var(--text)' }}>
+
+          <h3 className="relative z-10 text-xl font-bold mb-3 transition-colors duration-300" style={{ color: 'var(--text)' }}>
             {title}
           </h3>
-          <p className="leading-relaxed" style={{ color: 'var(--text-muted)' }}>{children}</p>
+          <p className="relative z-10 leading-relaxed" style={{ color: 'var(--text-muted)' }}>{children}</p>
         </div>
       </div>
     </div>

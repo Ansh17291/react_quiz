@@ -133,13 +133,13 @@ const LeaderboardPage = () => {
                   {overallLeaderboard.map((student, index) => (
                     <div
                       key={student._id}
-                      className="flex justify-between items-center p-3 bg-slate-700/50 rounded-lg hover:bg-slate-700 transition-transform duration-150 ease-out hover:scale-[1.01]"
+                      className="flex justify-between items-center p-3 rounded-lg hover:scale-[1.01] theme-transition"
+                      style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}
                     >
                       <span className="font-medium text-lg flex items-center gap-3">
                         <span
-                          className={`text-xl w-6 text-center ${
-                            index < 3 ? "" : "text-slate-400"
-                          }`}
+                          className="text-xl w-6 text-center"
+                          style={{ color: index < 3 ? 'inherit' : 'var(--text-muted)' }}
                         >
                           {rankBadges[index] || index + 1}
                         </span>
@@ -175,7 +175,8 @@ const LeaderboardPage = () => {
                 <select
                   onChange={handleQuizSelection}
                   value={selectedQuizId || ""}
-                  className="w-full p-2 mb-4 border rounded-md bg-slate-700 border-slate-600"
+                  className="w-full p-2 mb-4 border rounded-md theme-transition"
+                  style={{ background: 'var(--surface-2)', borderColor: 'var(--border)', color: 'var(--text)' }}
                 >
                   <option value="">-- Select a Quiz --</option>
                   {quizzes
@@ -195,32 +196,32 @@ const LeaderboardPage = () => {
                       </h4>
                       {quizStats && (
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
-                          <div className="bg-slate-700/30 p-3 rounded-lg">
-                            <p className="text-sm text-slate-400">
+                          <div className="p-3 rounded-lg theme-transition" style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
+                            <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
                               Average Score
                             </p>
                             <p className="text-xl font-bold">
                               {quizStats.avgScore.toFixed(1)}%
                             </p>
                           </div>
-                          <div className="bg-slate-700/30 p-3 rounded-lg">
-                            <p className="text-sm text-slate-400">
+                          <div className="p-3 rounded-lg theme-transition" style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
+                            <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
                               Highest Score
                             </p>
                             <p className="text-xl font-bold text-green-400">
                               {quizStats.maxScore}%
                             </p>
                           </div>
-                          <div className="bg-slate-700/30 p-3 rounded-lg">
-                            <p className="text-sm text-slate-400">
+                          <div className="p-3 rounded-lg theme-transition" style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
+                            <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
                               Lowest Score
                             </p>
                             <p className="text-xl font-bold text-yellow-400">
                               {quizStats.minScore}%
                             </p>
                           </div>
-                          <div className="bg-slate-700/30 p-3 rounded-lg">
-                            <p className="text-sm text-slate-400">
+                          <div className="p-3 rounded-lg theme-transition" style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
+                            <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
                               Total Attempts
                             </p>
                             <p className="text-xl font-bold">
@@ -236,17 +237,13 @@ const LeaderboardPage = () => {
                         {quizLeaderboard.map(({ user, result, rank }) => (
                           <div
                             key={user?._id}
-                            className={`flex justify-between items-center p-3 rounded-lg ${
-                              rank <= 3 ? "bg-slate-600/50" : "bg-slate-700/50"
-                            }`}
+                            className="flex justify-between items-center p-3 rounded-lg theme-transition"
+                            style={{ background: rank <= 3 ? 'var(--surface-3)' : 'var(--surface-2)', border: '1px solid var(--border)' }}
                           >
                             <span className="font-medium flex items-center gap-3">
                               <span
-                                className={`text-xl w-6 text-center ${
-                                  rank <= 3
-                                    ? "text-yellow-400"
-                                    : "text-slate-400"
-                                }`}
+                                className="text-xl w-6 text-center"
+                                style={{ color: rank <= 3 ? 'var(--accent)' : 'var(--text-muted)' }}
                               >
                                 {rank <= 3 ? rankBadges[rank - 1] : rank}
                               </span>
@@ -264,21 +261,20 @@ const LeaderboardPage = () => {
                                 <span className="font-bold text-primary-400 text-lg">
                                   {result.score}%
                                 </span>
-                                <span className="text-xs text-slate-400">
+                                <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
                                   {Math.floor(result.timeTaken / 60)}m{" "}
                                   {result.timeTaken % 60}s
                                 </span>
                               </div>
                               <TrophyIcon
-                                className={`w-5 h-5 ${
-                                  rank === 1
+                                className={`w-5 h-5 ${rank === 1
                                     ? "text-yellow-400"
                                     : rank === 2
-                                    ? "text-slate-300"
-                                    : rank === 3
-                                    ? "text-amber-600"
-                                    : "hidden"
-                                }`}
+                                      ? "text-slate-300"
+                                      : rank === 3
+                                        ? "text-amber-600"
+                                        : "hidden"
+                                  }`}
                               />
                             </div>
                           </div>
@@ -286,10 +282,10 @@ const LeaderboardPage = () => {
                       </StaggeredList>
                     ) : (
                       <div className="text-center py-8">
-                        <p className="text-slate-400 mb-2">
+                        <p className="mb-2" style={{ color: 'var(--text-muted)' }}>
                           No results yet for this quiz
                         </p>
-                        <p className="text-sm text-slate-500">
+                        <p className="text-sm" style={{ color: 'var(--text-subtle)' }}>
                           Students haven't attempted this quiz yet
                         </p>
                       </div>

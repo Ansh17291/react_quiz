@@ -23,7 +23,6 @@ const StudentDashboard = () => {
   const navigate = useNavigate();
   const { addToast } = useToast();
 
-  const [assignments, setAssignments] = React.useState<any[]>([]);
   const [studentAssignments, setStudentAssignments] = React.useState<any[]>([]);
   const [assignedPolls, setAssignedPolls] = React.useState<any[]>([]);
   const [users, setUsers] = React.useState<any[]>([]);
@@ -75,7 +74,6 @@ const StudentDashboard = () => {
         setUsers(usersRes || []);
         setQuizzes(quizzesRes || []);
         setResults(resultsRes || []);
-        setAssignments(assignmentsRes || []);
         try {
           const pollsAssigned = await api.getAssignedPolls();
           setAssignedPolls(pollsAssigned || []);
