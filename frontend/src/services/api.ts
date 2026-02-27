@@ -96,6 +96,7 @@ export const api = {
         },
         body: formData
     }).then(res => res.json()),
+    searchYoutubeVideos: (query: string): Promise<any[]> => request(`/api/youtube/search?q=${encodeURIComponent(query)}`),
 };
 
 export default api;

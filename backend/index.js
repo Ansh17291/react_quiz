@@ -12,6 +12,7 @@ const JSZip = require("jszip");
 const http = require("http");
 const socketIo = require("socket.io");
 const { encryptString, decryptString } = require("./utils/crypto");
+const { getJson } = require("serpapi");
 
 const encryptKey = process.env.ENCRYPT_KEY || "my passphrase";
 
@@ -1016,6 +1017,32 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: "Internal Server Error" });
 });
 
+app.get("/api/youtube/search", async (req, res) => {
+  const { q } = req.query;
+  if (!q) {
+    return res.status(400).json({ error: "Query 'q' is required" });
+  }
+
+  try {
+    getJson({
+      engine: "youtube",
+      search_query: q,
+      api_key: process.env.SERP_API_KEY
+    }, (json) => {
+      res.json(json["video_results"] || []);
+    });
+  } catch (e) {
+    console.error("YouTube search error:", e);
+    res.status(500).json({ error: "Failed to fetch YouTube results" });
+  }
+});
+
+// Final error handler (optional, but good practice)
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(500).send('Something broke!');
+});
+
 server.listen(PORT, () => {
-  console.log(`Listening on PORT: ${PORT}`);
+  console.log(`Server listening on port ${PORT}`);
 });
