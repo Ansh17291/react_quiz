@@ -27,7 +27,14 @@ const io = socketIo(server, {
 const PORT = process.env.PORT || 8080;
 
 // middleware
-app.use(cors());
+// app.use(cors());
+app.use(cors({
+  origin: [
+    "http://localhost:5173",          // local dev
+    "https://intelliquiz-sigma.vercel.app/" // production
+  ],
+  credentials: true
+}));
 app.use(morgan("dev"));
 app.use(express.json());
 // serve uploaded files statically
