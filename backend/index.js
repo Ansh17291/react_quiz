@@ -329,6 +329,7 @@ app.get("/api/quizzes", async (req, res) => {
   const quizzes = await Quiz.find().populate("questionPool").lean();
   const decrypted = (quizzes || []).map((q) => ({
     ...q,
+    category: q.category || "General",
     questionPool: (q.questionPool || []).map((ques) => ({
       ...ques,
       questionText: decryptString(ques.questionText),
@@ -351,10 +352,42 @@ app.post("/api/quizzes/:quizID/submit", async (req, res) => {
       submittedAt: resultData.submittedAt,
     });
 
-    // Find the user and add points
+    // Find the user and add points + update strengths/weaknesses
     const user = await User.findById(resultData.userId);
-    if (user) {
+    const quiz = await Quiz.findById(resultData.quizId);
+
+    if (user && quiz) {
       user.points = (user.points || 0) + resultData.score;
+
+      const category = quiz.category || "General";
+
+      // Initialize categoryStats if needed
+      if (!user.categoryStats) {
+        user.categoryStats = new Map();
+      }
+
+      const currentStats = user.categoryStats.get(category) || { totalScore: 0, count: 0 };
+      user.categoryStats.set(category, {
+        totalScore: currentStats.totalScore + resultData.score,
+        count: currentStats.count + 1
+      });
+
+      // Recalculate strengths and weaknesses
+      const newStrengths = [];
+      const newWeaknesses = [];
+
+      for (const [cat, stats] of user.categoryStats.entries()) {
+        const avg = stats.totalScore / stats.count;
+        if (avg >= 50) {
+          newStrengths.push(cat);
+        } else {
+          newWeaknesses.push(cat);
+        }
+      }
+
+      user.strengths = newStrengths;
+      user.weaknesses = newWeaknesses;
+
       await user.save();
     }
 
@@ -393,6 +426,7 @@ app.post("/api/quizzes", async (req, res) => {
 
     const newQuiz = await Quiz.create({
       title: quiz.title,
+      category: quiz.category || "General",
       questionPool: questionIds,
     });
 
@@ -548,6 +582,7 @@ app.get("/api/quizzes", async (req, res) => {
     const quizzes = await Quiz.find().populate("questionPool").lean();
     const decrypted = (quizzes || []).map((q) => ({
       ...q,
+      category: q.category || "General",
       questionPool: (q.questionPool || []).map((ques) => ({
         ...ques,
         questionText: decryptString(ques.questionText),

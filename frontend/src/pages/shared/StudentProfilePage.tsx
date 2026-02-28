@@ -104,8 +104,37 @@ const StudentProfilePage = () => {
   }, []);
 
   // Calculate strengths, weaknesses, and grade
+  const [strengths, setStrengths] = useState<string[]>([]);
+  const [weaknesses, setWeaknesses] = useState<string[]>([]);
+
   useEffect(() => {
-    if (!student || studentResults.length === 0 || quizzes.length === 0) {
+    if (!student || quizzes.length === 0) {
+      if (student) setIsLoading(false);
+      return;
+    }
+
+    // Prefer stored strengths and weaknesses if they exist
+    if (student.strengths && student.strengths.length > 0) {
+      setStrengths(student.strengths);
+      setWeaknesses(student.weaknesses || []);
+
+      // Still need to calculate grade
+      if (studentResults.length > 0) {
+        const calculatedGrade = Math.round(
+          studentResults.reduce((acc, r) => acc + r.score, 0) /
+          studentResults.length
+        );
+        setGrade(calculatedGrade);
+      }
+
+      setIsLoading(false);
+      return;
+    }
+
+    if (studentResults.length === 0) {
+      setGrade(0);
+      setStrengths([]);
+      setWeaknesses([]);
       setIsLoading(false);
       return;
     }
@@ -116,25 +145,36 @@ const StudentProfilePage = () => {
     );
     setGrade(calculatedGrade);
 
-    const topicCounter: Record<string, { correct: number; total: number }> = {};
+    const topicStats: Record<string, { totalScore: number; count: number }> = {};
 
     studentResults.forEach((res) => {
       const quiz = quizzes.find(
         (q) => String(q._id) === String(res.quizId) || String(q.id) === String(res.quizId)
       );
       if (quiz) {
-        if (!topicCounter[quiz.title]) {
-          topicCounter[quiz.title] = { correct: 0, total: 0 };
+        const category = quiz.category || "General";
+        if (!topicStats[category]) {
+          topicStats[category] = { totalScore: 0, count: 0 };
         }
-        if (res.answers && res.answers.length > 0) {
-          const correctCount = Math.round((res.score / 100) * res.answers.length);
-          topicCounter[quiz.title].correct += correctCount;
-          topicCounter[quiz.title].total += res.answers.length;
-        }
+        topicStats[category].totalScore += res.score;
+        topicStats[category].count += 1;
       }
     });
 
+    const s: string[] = [];
+    const w: string[] = [];
 
+    Object.entries(topicStats).forEach(([category, stats]) => {
+      const avg = stats.totalScore / stats.count;
+      if (avg >= 50) {
+        s.push(category);
+      } else {
+        w.push(category);
+      }
+    });
+
+    setStrengths(s);
+    setWeaknesses(w);
     setIsLoading(false);
   }, [student, studentResults, quizzes]);
 
@@ -166,8 +206,53 @@ const StudentProfilePage = () => {
             Overall Grade: <span className={gradeColor}>{grade}/100</span>
           </p>
         </div>
-
       </Card>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <Card className="border-l-4 border-green-500">
+          <h3 className="text-xl font-semibold mb-3 flex items-center gap-2">
+            <span className="p-1 bg-green-500/20 rounded text-green-500">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+              </svg>
+            </span>
+            Strengths
+          </h3>
+          <div className="flex flex-wrap gap-2">
+            {strengths.length > 0 ? (
+              strengths.map((s) => (
+                <span key={s} className="px-3 py-1 bg-green-500/10 text-green-400 rounded-full text-sm font-medium border border-green-500/20">
+                  {s}
+                </span>
+              ))
+            ) : (
+              <p className="text-slate-400 text-sm">No significant strengths yet.</p>
+            )}
+          </div>
+        </Card>
+        <Card className="border-l-4 border-red-500">
+          <h3 className="text-xl font-semibold mb-3 flex items-center gap-2">
+            <span className="p-1 bg-red-500/20 rounded text-red-500">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+              </svg>
+            </span>
+            Weaknesses
+          </h3>
+          <div className="flex flex-wrap gap-2">
+            {weaknesses.length > 0 ? (
+              weaknesses.map((w) => (
+                <span key={w} className="px-3 py-1 bg-red-500/10 text-red-400 rounded-full text-sm font-medium border border-red-500/20">
+                  {w}
+                </span>
+              ))
+            ) : (
+              <p className="text-slate-400 text-sm">No significant weaknesses identified.</p>
+            )}
+          </div>
+        </Card>
+      </div>
+
       <Card>
         <h3 className="text-2xl font-semibold mb-4">Activity</h3>
         <ContributionHeatmap results={studentResults} />

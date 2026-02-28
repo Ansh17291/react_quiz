@@ -68,6 +68,12 @@ const TeacherDashboard = () => {
   const [isAddingStudent, setIsAddingStudent] = useState(false);
   const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>([]);
   const [isCalendarModalOpen, setIsCalendarModalOpen] = useState(false);
+  const [quizCategory, setQuizCategory] = useState("General");
+  const [quizDeadline, setQuizDeadline] = useState(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 7);
+    return d.toISOString().split("T")[0];
+  });
 
   const allStudents = useMemo(() => users.filter((u) => u.role === "STUDENT").map(u => ({ id: u._id || u.id, name: u.name })), [users]);
 
@@ -451,6 +457,27 @@ const TeacherDashboard = () => {
                       <option value="Hard">Hard</option>
                     </select>
                   </label>
+                  <label className="block">
+                    <span style={{ color: 'var(--text-muted)' }}>Category:</span>
+                    <input
+                      type="text"
+                      value={quizCategory}
+                      onChange={(e) => setQuizCategory(e.target.value)}
+                      placeholder="e.g. Python, Maths"
+                      className="mt-1 block w-40 rounded-md shadow-sm focus:ring focus:ring-primary-200 focus:ring-opacity-50 theme-transition"
+                      style={{ background: 'var(--surface-2)', borderColor: 'var(--border)', color: 'var(--text)' }}
+                    />
+                  </label>
+                  <label className="block">
+                    <span style={{ color: 'var(--text-muted)' }}>Deadline:</span>
+                    <input
+                      type="date"
+                      value={quizDeadline}
+                      onChange={(e) => setQuizDeadline(e.target.value)}
+                      className="mt-1 block w-40 rounded-md shadow-sm focus:ring focus:ring-primary-200 focus:ring-opacity-50 theme-transition"
+                      style={{ background: 'var(--surface-2)', borderColor: 'var(--border)', color: 'var(--text)' }}
+                    />
+                  </label>
                   <div className="grow"></div>
                   <label className="cursor-pointer">
                     <Button
@@ -535,16 +562,17 @@ const TeacherDashboard = () => {
                           difficulty
                         );
                         await addQuiz(
-                          { title, questionPool: questions } as any,
+                          { title, category: quizCategory, questionPool: questions } as any,
                           {
                             studentIds: selectedStudentIds,
-                            deadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+                            deadline: new Date(quizDeadline).toISOString(),
                             timeLimit: 10,
                             isLive: false,
                             numQuestionsToAssign: questions.length
                           } as any
                         );
                         setSelectedStudentIds([]);
+                        setQuizCategory("General");
                         addToast("Quiz generated and assigned successfully!", "success");
                       } catch (e: any) {
                         setError(e.message || "Failed to generate quiz");
@@ -578,6 +606,27 @@ const TeacherDashboard = () => {
                   placeholder="Choose students..."
                   label="Assign Students"
                 />
+                <div className="w-full md:w-48">
+                  <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text-muted)' }}>Deadline</label>
+                  <input
+                    type="date"
+                    value={quizDeadline}
+                    onChange={(e) => setQuizDeadline(e.target.value)}
+                    className="w-full p-2 border rounded-md theme-transition"
+                    style={{ background: 'var(--surface-2)', borderColor: 'var(--border)', color: 'var(--text)' }}
+                  />
+                </div>
+                <div className="w-full md:w-64">
+                  <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text-muted)' }}>Category</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Python, Maths, DSA"
+                    value={quizCategory}
+                    onChange={(e) => setQuizCategory(e.target.value)}
+                    className="w-full p-2 border rounded-md theme-transition"
+                    style={{ background: 'var(--surface-2)', borderColor: 'var(--border)', color: 'var(--text)' }}
+                  />
+                </div>
               </div>
 
               <div className="space-y-4">
@@ -748,16 +797,17 @@ const TeacherDashboard = () => {
                       setIsCreating(true);
                       try {
                         await addQuiz(
-                          { title: manualTitle, questionPool: manualQuestions } as any,
+                          { title: manualTitle, category: quizCategory, questionPool: manualQuestions } as any,
                           {
                             studentIds: selectedStudentIds,
-                            deadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+                            deadline: new Date(quizDeadline).toISOString(),
                             timeLimit: 10,
                             isLive: false,
                             numQuestionsToAssign: manualQuestions.length
                           } as any
                         );
                         setManualTitle("");
+                        setQuizCategory("General");
                         setManualQuestions([
                           {
                             questionText: "",

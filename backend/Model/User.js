@@ -7,6 +7,16 @@ const UserSchema = mongoose.Schema({
   points: { type: Number, default: 0 },
   // optional password for auth routes
   password: { type: String },
+  strengths: [{ type: String }],
+  weaknesses: [{ type: String }],
+  categoryStats: {
+    type: Map,
+    of: {
+      totalScore: { type: Number, default: 0 },
+      count: { type: Number, default: 0 }
+    },
+    default: {}
+  }
 });
 
 UserSchema.set("toJSON", {

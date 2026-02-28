@@ -284,6 +284,7 @@ const StudentDashboard = () => {
               <p style={{ color: 'var(--text-muted)' }}>No polls assigned.</p>
             )}
           </Card>
+
           <Card>
             <h3 className="text-xl font-semibold mb-4" style={{ color: 'var(--text)' }}>Your Activity</h3>
             <ContributionHeatmap results={studentResults} />
