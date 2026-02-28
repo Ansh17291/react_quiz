@@ -1,6 +1,6 @@
 import type { Quiz, QuizResult, Resource, DiscussionPost } from '../types';
 
-export const BASE = "http://localhost:8080";
+export const BASE = "https://react-quiz-cd9r.onrender.com";
 
 async function request(path: string, opts: RequestInit = {}) {
     // attach Authorization header if token is stored in localStorage currentUser
